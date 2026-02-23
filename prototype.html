@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ClassBoard — Prototypes</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+  /* Prototype selector */
+  .proto-selector { display: flex; gap: 8px; padding: 16px; background: #1e293b; border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; }
+  .proto-selector h2 { width: 100%; font-size: 14px; color: #94a3b8; margin-bottom: 4px; }
+  .proto-btn { padding: 8px 16px; border-radius: 8px; border: 2px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .proto-btn.active { border-color: #3b82f6; background: #1e3a5f; color: #60a5fa; }
+  .proto-btn:hover { border-color: #3b82f6; }
+
+  .prototype { display: none; }
+  .prototype.active { display: block; }
+
+  /* Phone frame */
+  .phone { max-width: 390px; margin: 20px auto; background: #0f172a; border-radius: 24px; overflow: hidden; border: 2px solid #334155; min-height: 700px; position: relative; }
+
+  /* Shared styles */
+  .header { padding: 12px 16px; background: #1e293b; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header .settings-icon { width: 36px; height: 36px; border-radius: 8px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
+
+  /* Class colors */
+  .color-6a { --class-color: #3b82f6; --class-bg: #1e3a5f; }
+  .color-6c { --class-color: #06b6d4; --class-bg: #164e63; }
+  .color-5a { --class-color: #22c55e; --class-bg: #14532d; }
+  .color-5bd3 { --class-color: #84cc16; --class-bg: #365314; }
+  .color-4d { --class-color: #a855f7; --class-bg: #3b0764; }
+
+  /* === PROTOTYPE A: Chips en haut === */
+  .chips-nav { display: flex; gap: 8px; padding: 12px 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chips-nav::-webkit-scrollbar { display: none; }
+  .chip { padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; background: #1e293b; color: #94a3b8; flex-shrink: 0; }
+  .chip.active { color: white; }
+  .chip.active.color-6a { background: var(--class-bg); border-color: var(--class-color); color: var(--class-color); }
+  .chip.active.color-6c { background: var(--class-bg); border-color: var(--class-color); color: var(--class-color); }
+  .chip.active.color-5a { background: var(--class-bg); border-color: var(--class-color); color: var(--class-color); }
+  .chip.active.color-5bd3 { background: var(--class-bg); border-color: var(--class-color); color: var(--class-color); }
+  .chip.active.color-4d { background: var(--class-bg); border-color: var(--class-color); color: var(--class-color); }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid #334155; }
+  .tab { flex: 1; padding: 12px; text-align: center; font-size: 14px; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .tab.active { color: #e2e8f0; border-bottom-color: #3b82f6; }
+
+  /* Toggle vue */
+  .view-toggle { display: flex; gap: 4px; padding: 8px 16px; }
+  .toggle-btn { flex: 1; padding: 6px 12px; border-radius: 6px; font-size: 12px; text-align: center; cursor: pointer; background: transparent; color: #64748b; transition: all 0.2s; }
+  .toggle-btn.active { background: #334155; color: #e2e8f0; }
+
+  /* Content */
+  .content { padding: 0 16px 100px; }
+
+  /* Student group */
+  .student-group { margin-top: 16px; }
+  .student-name { font-size: 13px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+  /* Reminder card */
+  .reminder { display: flex; align-items: center; gap: 12px; padding: 12px; background: #1e293b; border-radius: 12px; margin-bottom: 8px; }
+  .reminder-check { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #475569; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .reminder-check:hover { border-color: #22c55e; }
+  .reminder-check.done { background: #22c55e; border-color: #22c55e; }
+  .reminder-check.done::after { content: '✓'; color: white; font-size: 14px; }
+  .reminder-info { flex: 1; min-width: 0; }
+  .reminder-text { font-size: 14px; line-height: 1.4; }
+  .reminder-text.done { text-decoration: line-through; color: #475569; }
+  .reminder-meta { display: flex; gap: 8px; margin-top: 4px; align-items: center; }
+  .reminder-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .tag-punition { background: #7f1d1d; color: #fca5a5; }
+  .tag-rattrapage { background: #78350f; color: #fcd34d; }
+  .tag-materiel { background: #1e3a5f; color: #93c5fd; }
+  .tag-mot { background: #3b0764; color: #d8b4fe; }
+  .reminder-date { font-size: 11px; color: #64748b; }
+  .reminder-date.overdue { color: #f87171; font-weight: 600; }
+
+  /* Note card */
+  .note { padding: 12px; background: #1e293b; border-radius: 12px; margin-bottom: 8px; margin-top: 8px; }
+  .note-text { font-size: 14px; line-height: 1.5; }
+  .note-pinned { border-left: 3px solid #f59e0b; }
+  .note-date { font-size: 11px; color: #64748b; margin-top: 6px; }
+  .pin-icon { color: #f59e0b; font-size: 12px; }
+
+  /* FAB */
+  .fab { position: absolute; bottom: 20px; right: 20px; width: 56px; height: 56px; border-radius: 16px; background: #3b82f6; color: white; font-size: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(59,130,246,0.4); transition: transform 0.2s; }
+  .fab:hover { transform: scale(1.05); }
+
+  /* === PROTOTYPE B: Grille d'accueil === */
+  .class-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+  .class-card { padding: 20px 16px; border-radius: 16px; cursor: pointer; transition: all 0.2s; position: relative; }
+  .class-card:hover { transform: scale(1.02); }
+  .class-card.color-6a { background: linear-gradient(135deg, #1e3a5f, #1e293b); border: 1px solid #3b82f680; }
+  .class-card.color-6c { background: linear-gradient(135deg, #164e63, #1e293b); border: 1px solid #06b6d480; }
+  .class-card.color-5a { background: linear-gradient(135deg, #14532d, #1e293b); border: 1px solid #22c55e80; }
+  .class-card.color-5bd3 { background: linear-gradient(135deg, #365314, #1e293b); border: 1px solid #84cc1680; }
+  .class-card.color-4d { background: linear-gradient(135deg, #3b0764, #1e293b); border: 1px solid #a855f780; }
+  .class-card-name { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .class-card.color-6a .class-card-name { color: #60a5fa; }
+  .class-card.color-6c .class-card-name { color: #22d3ee; }
+  .class-card.color-5a .class-card-name { color: #4ade80; }
+  .class-card.color-5bd3 .class-card-name { color: #a3e635; }
+  .class-card.color-4d .class-card-name { color: #c084fc; }
+  .class-card-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #94a3b8; background: #0f172a80; padding: 4px 8px; border-radius: 6px; }
+  .class-card-badge .count { font-weight: 700; color: #f87171; }
+  .class-card.full-width { grid-column: 1 / -1; }
+
+  /* Back button */
+  .back-btn { background: none; border: none; color: #60a5fa; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0; }
+  .class-title-row { display: flex; align-items: center; gap: 8px; }
+  .class-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* === PROTOTYPE C: Bottom tabs === */
+  .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; display: flex; background: #1e293b; border-top: 1px solid #334155; padding: 8px 0 20px; }
+  .bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; color: #64748b; font-size: 11px; transition: color 0.2s; padding: 4px; }
+  .bottom-nav-item.active { color: #3b82f6; }
+  .bottom-nav-item .nav-icon { font-size: 20px; }
+  .bottom-nav-item .nav-badge { background: #ef4444; color: white; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 10px; position: relative; top: -2px; }
+
+  /* Description sous chaque proto */
+  .proto-desc { max-width: 390px; margin: 0 auto 30px; padding: 16px; background: #1e293b; border-radius: 12px; font-size: 14px; line-height: 1.6; color: #94a3b8; }
+  .proto-desc strong { color: #e2e8f0; }
+  .proto-desc ul { margin-top: 8px; padding-left: 20px; }
+  .proto-desc li { margin-bottom: 4px; }
+  .proto-label { text-align: center; max-width: 390px; margin: 20px auto 0; font-size: 16px; font-weight: 700; color: #60a5fa; }
+</style>
+</head>
+<body>
+
+<div class="proto-selector">
+  <h2>Choisis un prototype de navigation :</h2>
+  <button class="proto-btn active" onclick="showProto('a')">A — Chips en haut</button>
+  <button class="proto-btn" onclick="showProto('b')">B — Grille d'accueil</button>
+  <button class="proto-btn" onclick="showProto('c')">C — Barre en bas</button>
+</div>
+
+<!-- ==================== PROTOTYPE A : Chips ==================== -->
+<div id="proto-a" class="prototype active">
+  <div class="proto-label">Prototype A — Chips en haut</div>
+  <div class="phone">
+    <div class="header">
+      <h1>ClassBoard</h1>
+      <div class="settings-icon">⚙</div>
+    </div>
+    <div class="chips-nav">
+      <div class="chip active color-6a" onclick="selectChipA(this)">6e A</div>
+      <div class="chip color-6c" onclick="selectChipA(this)">6e C</div>
+      <div class="chip color-5a" onclick="selectChipA(this)">5e A</div>
+      <div class="chip color-5bd3" onclick="selectChipA(this)">5e BD3</div>
+      <div class="chip color-4d" onclick="selectChipA(this)">4e D</div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="selectTab(this)">Rappels (3)</div>
+      <div class="tab" onclick="selectTab(this)">Notes de classe</div>
+    </div>
+    <div class="view-toggle">
+      <div class="toggle-btn active">👤 Par élève</div>
+      <div class="toggle-btn">📅 Chronologique</div>
+    </div>
+    <div class="content">
+      <div class="student-group">
+        <div class="student-name">Dupont Marie</div>
+        <div class="reminder">
+          <div class="reminder-check" onclick="toggleCheck(this)"></div>
+          <div class="reminder-info">
+            <div class="reminder-text">Rendre punition (exercices p.45)</div>
+            <div class="reminder-meta">
+              <span class="reminder-tag tag-punition">Punition</span>
+              <span class="reminder-date overdue">Échéance : 20 fév ⚠️</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="student-group">
+        <div class="student-name">Martin Lucas</div>
+        <div class="reminder">
+          <div class="reminder-check" onclick="toggleCheck(this)"></div>
+          <div class="reminder-info">
+            <div class="reminder-text">Rattraper éval du 12/02</div>
+            <div class="reminder-meta">
+              <span class="reminder-tag tag-rattrapage">Rattrapage</span>
+              <span class="reminder-date">Échéance : 28 fév</span>
+            </div>
+          </div>
+        </div>
+        <div class="reminder">
+          <div class="reminder-check" onclick="toggleCheck(this)"></div>
+          <div class="reminder-info">
+            <div class="reminder-text">Mot aux parents à faire signer</div>
+            <div class="reminder-meta">
+              <span class="reminder-tag tag-mot">Mot à signer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="fab">+</div>
+  </div>
+  <div class="proto-desc">
+    <strong>Navigation par chips horizontaux</strong>
+    <ul>
+      <li>Un tap pour changer de classe, toujours visible</li>
+      <li>Couleur de la classe active = feedback immédiat</li>
+      <li>Scroll horizontal si plus de 5 classes</li>
+      <li>Tout sur une seule page, zéro navigation</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== PROTOTYPE B : Grille ==================== -->
+<div id="proto-b" class="prototype">
+  <div class="proto-label">Prototype B — Grille d'accueil</div>
+  <div class="phone" id="phone-b">
+    <!-- Vue grille -->
+    <div id="grid-view">
+      <div class="header">
+        <h1>ClassBoard</h1>
+        <div class="settings-icon">⚙</div>
+      </div>
+      <div class="class-grid">
+        <div class="class-card color-6a" onclick="enterClass('6e A', '#3b82f6')">
+          <div class="class-card-name">6e A</div>
+          <div class="class-card-badge"><span class="count">3</span> rappels actifs</div>
+        </div>
+        <div class="class-card color-6c" onclick="enterClass('6e C', '#06b6d4')">
+          <div class="class-card-name">6e C</div>
+          <div class="class-card-badge"><span class="count">1</span> rappel actif</div>
+        </div>
+        <div class="class-card color-5a" onclick="enterClass('5e A', '#22c55e')">
+          <div class="class-card-name">5e A</div>
+          <div class="class-card-badge">Aucun rappel</div>
+        </div>
+        <div class="class-card color-5bd3" onclick="enterClass('5e BD3', '#84cc16')">
+          <div class="class-card-name">5e BD3</div>
+          <div class="class-card-badge"><span class="count">2</span> rappels actifs</div>
+        </div>
+        <div class="class-card color-4d full-width" onclick="enterClass('4e D', '#a855f7')">
+          <div class="class-card-name">4e D</div>
+          <div class="class-card-badge"><span class="count">5</span> rappels actifs</div>
+        </div>
+      </div>
+    </div>
+    <!-- Vue classe -->
+    <div id="class-view" style="display:none;">
+      <div class="header">
+        <div class="class-title-row">
+          <button class="back-btn" onclick="backToGrid()">← Retour</button>
+        </div>
+        <div class="settings-icon">⚙</div>
+      </div>
+      <div style="padding: 12px 16px; display: flex; align-items: center; gap: 8px;">
+        <div class="class-dot" id="class-dot"></div>
+        <h2 id="class-view-title" style="font-size: 18px; font-weight: 700;"></h2>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="selectTab(this)">Rappels (3)</div>
+        <div class="tab" onclick="selectTab(this)">Notes de classe</div>
+      </div>
+      <div class="view-toggle">
+        <div class="toggle-btn active">👤 Par élève</div>
+        <div class="toggle-btn">📅 Chronologique</div>
+      </div>
+      <div class="content">
+        <div class="student-group">
+          <div class="student-name">Dupont Marie</div>
+          <div class="reminder">
+            <div class="reminder-check" onclick="toggleCheck(this)"></div>
+            <div class="reminder-info">
+              <div class="reminder-text">Rendre punition (exercices p.45)</div>
+              <div class="reminder-meta">
+                <span class="reminder-tag tag-punition">Punition</span>
+                <span class="reminder-date overdue">Échéance : 20 fév ⚠️</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="student-group">
+          <div class="student-name">Martin Lucas</div>
+          <div class="reminder">
+            <div class="reminder-check" onclick="toggleCheck(this)"></div>
+            <div class="reminder-info">
+              <div class="reminder-text">Rattraper éval du 12/02</div>
+              <div class="reminder-meta">
+                <span class="reminder-tag tag-rattrapage">Rattrapage</span>
+                <span class="reminder-date">Échéance : 28 fév</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="fab">+</div>
+    </div>
+  </div>
+  <div class="proto-desc">
+    <strong>Grille de classes en page d'accueil</strong>
+    <ul>
+      <li>Vue d'ensemble avec badges de rappels actifs</li>
+      <li>Cartes colorées = identification rapide</li>
+      <li>Un tap pour entrer dans une classe</li>
+      <li>Bouton retour pour revenir à la grille</li>
+      <li>⚠️ Un clic de plus pour accéder aux rappels</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== PROTOTYPE C : Bottom nav ==================== -->
+<div id="proto-c" class="prototype">
+  <div class="proto-label">Prototype C — Barre en bas (par classe)</div>
+  <div class="phone">
+    <div class="header">
+      <h1 style="font-size: 16px;">ClassBoard</h1>
+      <div class="settings-icon">⚙</div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="selectTab(this)">Rappels (3)</div>
+      <div class="tab" onclick="selectTab(this)">Notes de classe</div>
+    </div>
+    <div class="view-toggle">
+      <div class="toggle-btn active">👤 Par élève</div>
+      <div class="toggle-btn">📅 Chronologique</div>
+    </div>
+    <div class="content" style="padding-bottom: 140px;">
+      <div class="student-group">
+        <div class="student-name">Dupont Marie</div>
+        <div class="reminder">
+          <div class="reminder-check" onclick="toggleCheck(this)"></div>
+          <div class="reminder-info">
+            <div class="reminder-text">Rendre punition (exercices p.45)</div>
+            <div class="reminder-meta">
+              <span class="reminder-tag tag-punition">Punition</span>
+              <span class="reminder-date overdue">Échéance : 20 fév ⚠️</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="student-group">
+        <div class="student-name">Martin Lucas</div>
+        <div class="reminder">
+          <div class="reminder-check" onclick="toggleCheck(this)"></div>
+          <div class="reminder-info">
+            <div class="reminder-text">Rattraper éval du 12/02</div>
+            <div class="reminder-meta">
+              <span class="reminder-tag tag-rattrapage">Rattrapage</span>
+              <span class="reminder-date">Échéance : 28 fév</span>
+            </div>
+          </div>
+        </div>
+        <div class="reminder">
+          <div class="reminder-check" onclick="toggleCheck(this)"></div>
+          <div class="reminder-info">
+            <div class="reminder-text">Mot aux parents à faire signer</div>
+            <div class="reminder-meta">
+              <span class="reminder-tag tag-mot">Mot à signer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="fab" style="bottom: 80px;">+</div>
+    <div class="bottom-nav">
+      <div class="bottom-nav-item active" style="color: #3b82f6;">
+        <span class="nav-icon">📘</span>
+        6e A <span class="nav-badge">3</span>
+      </div>
+      <div class="bottom-nav-item" onclick="selectBottomNav(this, '#06b6d4')">
+        <span class="nav-icon">📘</span>
+        6e C <span class="nav-badge">1</span>
+      </div>
+      <div class="bottom-nav-item" onclick="selectBottomNav(this, '#22c55e')">
+        <span class="nav-icon">📗</span>
+        5e A
+      </div>
+      <div class="bottom-nav-item" onclick="selectBottomNav(this, '#84cc16')">
+        <span class="nav-icon">📗</span>
+        5e BD3 <span class="nav-badge">2</span>
+      </div>
+      <div class="bottom-nav-item" onclick="selectBottomNav(this, '#a855f7')">
+        <span class="nav-icon">📕</span>
+        4e D <span class="nav-badge">5</span>
+      </div>
+    </div>
+  </div>
+  <div class="proto-desc">
+    <strong>Barre de navigation en bas (style app mobile)</strong>
+    <ul>
+      <li>Chaque classe = un onglet en bas avec badge</li>
+      <li>Navigation naturelle sur mobile (pouce en bas)</li>
+      <li>Badges de rappels visibles sur tous les onglets</li>
+      <li>⚠️ 5 onglets c'est la limite, pas extensible</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+function showProto(id) {
+  document.querySelectorAll('.prototype').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.proto-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('proto-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function selectChipA(chip) {
+  chip.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+}
+
+function selectTab(tab) {
+  tab.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  const text = el.nextElementSibling.querySelector('.reminder-text');
+  text.classList.toggle('done');
+}
+
+function enterClass(name, color) {
+  document.getElementById('grid-view').style.display = 'none';
+  document.getElementById('class-view').style.display = 'block';
+  document.getElementById('class-view-title').textContent = name;
+  document.getElementById('class-dot').style.background = color;
+}
+
+function backToGrid() {
+  document.getElementById('grid-view').style.display = 'block';
+  document.getElementById('class-view').style.display = 'none';
+}
+
+function selectBottomNav(el, color) {
+  el.parentElement.querySelectorAll('.bottom-nav-item').forEach(i => {
+    i.classList.remove('active');
+    i.style.color = '';
+  });
+  el.classList.add('active');
+  el.style.color = color;
+}
+
+// Toggle vue
+document.querySelectorAll('.view-toggle').forEach(vt => {
+  vt.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      vt.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+});
+</script>
+</body>
+</html>
