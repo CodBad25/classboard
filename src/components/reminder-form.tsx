@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import { EnrichedReminder, SearchableStudent, Category } from "@/types";
 import {
   Dialog,
@@ -29,8 +30,9 @@ export function ReminderForm({
   editReminder,
   onSaved,
 }: ReminderFormProps) {
-  const [selectedStudent, setSelectedStudent] =
-    useState<SearchableStudent | null>(null);
+  const [selectedStudents, setSelectedStudents] = useState<
+    SearchableStudent[]
+  >([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] =
     useState<string | null>(null);
@@ -38,9 +40,11 @@ export function ReminderForm({
   const [dueDate, setDueDate] = useState("");
   const [delayMinutes, setDelayMinutes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [createdCount, setCreatedCount] = useState(0);
 
   const selectedCat = categories.find((c) => c.id === selectedCategory);
   const isRetard = selectedCat?.label.toLowerCase() === "retard";
+  const isMultiStudent = selectedStudents.length > 1;
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -70,8 +74,9 @@ export function ReminderForm({
         setText("");
         setDueDate("");
         setSelectedCategory(null);
-        setSelectedStudent(null);
+        setSelectedStudents([]);
         setDelayMinutes("");
+        setCreatedCount(0);
       }
     }
   }, [open, editReminder]);
@@ -83,6 +88,13 @@ export function ReminderForm({
     }
   }, [isRetard, delayMinutes, editReminder]);
 
+  const resetFormFields = () => {
+    setText("");
+    setDueDate("");
+    setSelectedCategory(null);
+    setDelayMinutes("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -91,46 +103,77 @@ export function ReminderForm({
       return;
     }
 
-    if (!editReminder && !selectedStudent) {
-      toast.error("Sélectionner un élève est requis");
+    if (!editReminder && selectedStudents.length === 0) {
+      toast.error("Sélectionner au moins un élève");
       return;
     }
 
     setLoading(true);
     try {
-      const url = editReminder
-        ? `/api/reminders/${editReminder.id}`
-        : "/api/reminders";
-
-      const method = editReminder ? "PATCH" : "POST";
-
-      const payload = editReminder
-        ? {
-            text,
-            dueDate: dueDate || null,
-            categoryId: selectedCategory || null,
+      if (editReminder) {
+        const res = await fetch(
+          `/api/reminders/${editReminder.id}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text,
+              dueDate: dueDate || null,
+              categoryId: selectedCategory || null,
+            }),
           }
-        : {
-            studentId: selectedStudent!.id,
-            text,
-            dueDate: dueDate || null,
-            categoryId: selectedCategory || null,
-          };
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        toast.success(
-          editReminder ? "Rappel modifié" : "Rappel créé"
         );
-        onSaved();
-        onOpenChange(false);
+
+        if (res.ok) {
+          toast.success("Rappel modifié");
+          onSaved();
+          onOpenChange(false);
+        } else {
+          toast.error("Erreur lors de la sauvegarde");
+        }
       } else {
-        toast.error("Erreur lors de la sauvegarde");
+        const results = await Promise.all(
+          selectedStudents.map((student) =>
+            fetch("/api/reminders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                studentId: student.id,
+                text,
+                dueDate: dueDate || null,
+                categoryId: selectedCategory || null,
+              }),
+            })
+          )
+        );
+
+        const successCount = results.filter((r) => r.ok).length;
+
+        if (successCount > 0) {
+          const newTotal = createdCount + successCount;
+          setCreatedCount(newTotal);
+          onSaved();
+
+          if (isMultiStudent) {
+            // Multi-student: keep dialog open, reset form fields, keep students
+            toast.success(
+              successCount === 1
+                ? "Rappel créé"
+                : `Rappel ajouté à ${successCount} élèves`
+            );
+            resetFormFields();
+          } else {
+            // Single student: close dialog
+            toast.success("Rappel créé");
+            onOpenChange(false);
+          }
+        }
+
+        if (successCount < selectedStudents.length) {
+          toast.error(
+            `${successCount}/${selectedStudents.length} rappels créés`
+          );
+        }
       }
     } catch (error) {
       console.error("Error saving reminder:", error);
@@ -140,15 +183,30 @@ export function ReminderForm({
     }
   };
 
+  const handleClose = (openState: boolean) => {
+    if (!openState && createdCount > 0) {
+      onSaved();
+    }
+    onOpenChange(openState);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-[92vw] rounded-xl max-h-[85dvh] flex flex-col gap-0 p-4 !top-4 !translate-y-0">
         <DialogHeader className="shrink-0 pb-2">
-          <DialogTitle className="text-base">
-            {editReminder
-              ? "Modifier le rappel"
-              : "Nouveau rappel"}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-base">
+              {editReminder
+                ? "Modifier le rappel"
+                : "Nouveau rappel"}
+            </DialogTitle>
+            {createdCount > 0 && !editReminder && (
+              <span className="text-xs text-green-500 font-medium flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" />
+                {createdCount} créé{createdCount > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </DialogHeader>
         <form
           onSubmit={handleSubmit}
@@ -156,10 +214,10 @@ export function ReminderForm({
         >
           {!editReminder && (
             <div>
-              <Label className="text-xs">Élève</Label>
+              <Label className="text-xs">Élève(s)</Label>
               <StudentSearch
-                onSelect={setSelectedStudent}
-                selectedStudent={selectedStudent}
+                onSelect={setSelectedStudents}
+                selectedStudents={selectedStudents}
               />
             </div>
           )}
@@ -177,10 +235,16 @@ export function ReminderForm({
                       if (selectedCategory === cat.id) {
                         setSelectedCategory(null);
                         setDelayMinutes("");
+                        setText("");
                       } else {
                         setSelectedCategory(cat.id);
                         if (cat.label.toLowerCase() !== "retard") {
                           setDelayMinutes("");
+                        }
+                        if (cat.defaultText) {
+                          setText(cat.defaultText);
+                        } else {
+                          setText("");
                         }
                       }
                     }}
@@ -250,7 +314,11 @@ export function ReminderForm({
             disabled={loading}
             className="w-full shrink-0"
           >
-            {loading ? "Enregistrement..." : "Enregistrer"}
+            {loading
+              ? "Enregistrement..."
+              : isMultiStudent
+                ? `Enregistrer et continuer (${selectedStudents.length} élèves)`
+                : "Enregistrer"}
           </Button>
         </form>
       </DialogContent>

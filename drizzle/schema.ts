@@ -65,6 +65,7 @@ export const reminderCategories = pgTable("reminder_categories", {
   label: varchar("label", { length: 50 }).notNull(),
   color: varchar("color", { length: 30 }).notNull(),
   icon: varchar("icon", { length: 50 }).notNull(),
+  defaultText: varchar("default_text", { length: 200 }),
   sortOrder: integer("sort_order").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });

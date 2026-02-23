@@ -49,6 +49,7 @@ export type Category = {
   label: string;
   color: string;
   icon: string;
+  defaultText: string | null;
   sortOrder: number;
 };
 

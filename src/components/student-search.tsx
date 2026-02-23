@@ -4,21 +4,20 @@ import { useState, useEffect, useCallback } from "react";
 import { Search, X } from "lucide-react";
 import { SearchableStudent } from "@/types";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 interface StudentSearchProps {
-  onSelect: (student: SearchableStudent | null) => void;
-  selectedStudent: SearchableStudent | null;
+  onSelect: (students: SearchableStudent[]) => void;
+  selectedStudents: SearchableStudent[];
+  editMode?: boolean;
 }
 
 export function StudentSearch({
   onSelect,
-  selectedStudent,
+  selectedStudents,
+  editMode,
 }: StudentSearchProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchableStudent[]>(
-    []
-  );
+  const [results, setResults] = useState<SearchableStudent[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
@@ -59,40 +58,24 @@ export function StudentSearch({
   }, [query, searchStudents]);
 
   const handleSelect = (student: SearchableStudent) => {
-    onSelect(student);
+    // Don't add if already selected
+    if (selectedStudents.some((s) => s.id === student.id)) return;
+    onSelect([...selectedStudents, student]);
     setQuery("");
     setResults([]);
     setShowResults(false);
   };
 
-  const handleDeselect = () => {
-    onSelect(null);
-    setQuery("");
-    setResults([]);
+  const handleRemove = (studentId: string) => {
+    onSelect(selectedStudents.filter((s) => s.id !== studentId));
   };
 
-  if (selectedStudent) {
-    return (
-      <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg">
-        <div className="flex-1">
-          <p className="text-sm font-medium">
-            {selectedStudent.lastName}{" "}
-            {selectedStudent.firstName}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {selectedStudent.className}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleDeselect}
-        >
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
-    );
-  }
+  if (editMode) return null;
+
+  // Filter out already-selected students from results
+  const filteredResults = results.filter(
+    (r) => !selectedStudents.some((s) => s.id === r.id)
+  );
 
   return (
     <div className="relative">
@@ -108,23 +91,57 @@ export function StudentSearch({
           className="pl-9"
         />
       </div>
+
+      {/* Selected students badges */}
+      {selectedStudents.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {selectedStudents.map((student) => {
+            const genderColor =
+              student.gender === "F"
+                ? "bg-pink-400"
+                : student.gender === "M"
+                  ? "bg-blue-400"
+                  : null;
+            return (
+              <span
+                key={student.id}
+                className="inline-flex items-center gap-1 px-2 py-0.5 bg-secondary rounded-full text-xs font-medium"
+              >
+                {genderColor && (
+                  <span className={`w-1.5 h-1.5 rounded-full ${genderColor}`} />
+                )}
+                {student.firstName} {student.lastName.charAt(0)}.
+                <button
+                  type="button"
+                  onClick={() => handleRemove(student.id)}
+                  className="ml-0.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {showResults && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-card rounded-lg border border-border shadow-lg z-10 max-h-64 overflow-y-auto">
           {loading ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
               Recherche...
             </div>
-          ) : results.length === 0 ? (
+          ) : filteredResults.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
-              Aucun élève trouvé
+              {results.length > 0
+                ? "Tous les résultats sont déjà sélectionnés"
+                : "Aucun élève trouvé"}
             </div>
           ) : (
-            results.map((student) => (
+            filteredResults.map((student) => (
               <button
                 key={student.id}
-                onClick={() =>
-                  handleSelect(student)
-                }
+                type="button"
+                onClick={() => handleSelect(student)}
                 className="w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center gap-2"
               >
                 <div

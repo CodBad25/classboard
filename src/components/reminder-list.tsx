@@ -1,8 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { BookOpen } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  format,
+  parseISO,
+  isWithinInterval,
+} from "date-fns";
+import { fr } from "date-fns/locale";
 import { EnrichedReminder } from "@/types";
 import { ReminderCard } from "./reminder-card";
 import { ViewToggle } from "./view-toggle";
@@ -35,6 +44,7 @@ export function ReminderList({
     useState<EnrichedReminder | null>(null);
   const [statsStudentId, setStatsStudentId] =
     useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
 
   const fetchReminders = async () => {
     if (!classId) return;
@@ -60,6 +70,13 @@ export function ReminderList({
     fetchReminders();
   }, [classId]);
 
+  // Reset week offset when switching to chronological
+  useEffect(() => {
+    if (viewMode === "chronological") {
+      setWeekOffset(0);
+    }
+  }, [viewMode]);
+
   const filteredReminders = reminders.filter(
     (reminder) =>
       reminder.studentFirstName
@@ -71,7 +88,6 @@ export function ReminderList({
   );
 
   const handleToggle = async (id: string) => {
-    // Optimistic update
     setReminders((prev) =>
       prev.map((r) =>
         r.id === id ? { ...r, isDone: !r.isDone } : r
@@ -93,7 +109,6 @@ export function ReminderList({
       );
 
       if (!res.ok) {
-        // Revert on error
         setReminders((prev) =>
           prev.map((r) =>
             r.id === id ? { ...r, isDone: !r.isDone } : r
@@ -164,29 +179,49 @@ export function ReminderList({
     >
   );
 
-  const sortedReminders =
-    viewMode === "chronological"
-      ? [...filteredReminders].sort(
-          (a, b) => {
-            if (a.dueDate && b.dueDate) {
-              const dateA = new Date(a.dueDate);
-              const dateB = new Date(b.dueDate);
-              if (dateA.getTime() !== dateB.getTime()) {
-                return (
-                  dateA.getTime() -
-                  dateB.getTime()
-                );
-              }
-            } else if (a.dueDate) return -1;
-            else if (b.dueDate) return 1;
+  // Week boundaries for chronological view
+  const currentWeekStart = useMemo(
+    () => startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 }),
+    [weekOffset]
+  );
+  const currentWeekEnd = useMemo(
+    () => endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 }),
+    [weekOffset]
+  );
 
-            return (
-              new Date(b.createdAt).getTime() -
-              new Date(a.createdAt).getTime()
-            );
-          }
-        )
-      : null;
+  // Group reminders by day within the selected week
+  const groupedByDay = useMemo(() => {
+    if (viewMode !== "chronological") return [];
+
+    const weekReminders = filteredReminders.filter((r) => {
+      const date = parseISO(r.createdAt);
+      return isWithinInterval(date, {
+        start: currentWeekStart,
+        end: currentWeekEnd,
+      });
+    });
+
+    // Group by day string
+    const groups: Record<string, EnrichedReminder[]> = {};
+    for (const r of weekReminders) {
+      const dayKey = format(parseISO(r.createdAt), "yyyy-MM-dd");
+      if (!groups[dayKey]) groups[dayKey] = [];
+      groups[dayKey].push(r);
+    }
+
+    // Sort days descending (most recent first)
+    return Object.entries(groups)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([dayKey, dayReminders]) => ({
+        dayKey,
+        label: format(parseISO(dayKey), "EEEE d MMMM", { locale: fr }),
+        reminders: dayReminders,
+      }));
+  }, [viewMode, filteredReminders, currentWeekStart, currentWeekEnd]);
+
+  const weekLabel = format(currentWeekStart, "d MMM", { locale: fr })
+    + " – "
+    + format(currentWeekEnd, "d MMM", { locale: fr });
 
   if (loading) {
     return (
@@ -231,9 +266,38 @@ export function ReminderList({
           />
         </div>
 
+        {/* Week navigator for chronological view */}
+        {viewMode === "chronological" && (
+          <div className="flex items-center justify-between px-1">
+            <button
+              onClick={() => setWeekOffset((w) => w - 1)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setWeekOffset(0)}
+              className={`text-xs font-medium ${
+                weekOffset === 0
+                  ? "text-foreground"
+                  : "text-muted-foreground underline decoration-dotted underline-offset-2"
+              }`}
+            >
+              {weekOffset === 0 ? "Cette semaine" : weekLabel}
+            </button>
+            <button
+              onClick={() => setWeekOffset((w) => Math.min(w + 1, 0))}
+              disabled={weekOffset >= 0}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {!hasResults && (
           <p className="text-sm text-muted-foreground text-center py-4">
-            Aucun résultat pour "{searchQuery}"
+            Aucun résultat pour &quot;{searchQuery}&quot;
           </p>
         )}
 
@@ -266,17 +330,35 @@ export function ReminderList({
                 </div>
               )
             )
-          : sortedReminders?.map((reminder) => (
-              <ReminderCard
-                key={reminder.id}
-                reminder={reminder}
-                showStudentName
-                onToggle={handleToggle}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onStudentTap={(studentId) => setStatsStudentId(studentId)}
-              />
-            ))}
+          : groupedByDay.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Aucun rappel cette semaine
+              </p>
+            ) : (
+              groupedByDay.map((day) => (
+                <div key={day.dayKey}>
+                  <h3 className="text-xs font-semibold text-muted-foreground mb-1.5 capitalize">
+                    {day.label}
+                    <span className="text-[10px] font-normal ml-1.5">
+                      ({day.reminders.length})
+                    </span>
+                  </h3>
+                  <div className="space-y-1">
+                    {day.reminders.map((reminder) => (
+                      <ReminderCard
+                        key={reminder.id}
+                        reminder={reminder}
+                        showStudentName
+                        onToggle={handleToggle}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onStudentTap={(studentId) => setStatsStudentId(studentId)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
       </div>
 
       <ReminderForm
