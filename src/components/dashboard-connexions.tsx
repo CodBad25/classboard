@@ -402,14 +402,14 @@ function StatCard({ label, value, sub, hue, onClick }: { label: string; value: s
     orange:  "border-orange-200 bg-orange-50 text-orange-900",
     purple:  "border-purple-200 bg-purple-50 text-purple-900",
   };
-  const cls = `rounded-xl border-2 p-3 text-left w-full transition-all ${colors[hue] ?? colors.blue} ${onClick ? "cursor-pointer hover:scale-[1.02] hover:shadow-md" : ""}`;
+  const cls = `rounded-xl border-2 py-2 px-3 text-left w-full transition-all ${colors[hue] ?? colors.blue} ${onClick ? "cursor-pointer hover:scale-[1.02] hover:shadow-md" : ""}`;
   const content = (
     <>
       <p className="text-xl font-black tabular-nums">{value}</p>
-      <p className="text-xs font-medium mt-0.5 flex items-center gap-1">
+      <p className="text-xs font-medium flex items-center gap-1">
         {label} {onClick && <span className="opacity-50">›</span>}
       </p>
-      {sub && <p className="text-[10px] opacity-70 mt-0.5">{sub}</p>}
+      {sub && <p className="text-[10px] opacity-70">{sub}</p>}
     </>
   );
   return onClick ? <button type="button" onClick={onClick} className={cls}>{content}</button> : <div className={cls}>{content}</div>;
