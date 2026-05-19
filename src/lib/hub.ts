@@ -48,7 +48,8 @@ export const getEleves = unstable_cache(
 export const getAllResultats = unstable_cache(
   async (): Promise<HubResultat[]> => {
     const data = await hubFetch<{ resultats: HubResultat[] }>("/resultats");
-    return data.resultats ?? [];
+    // Le champ `details` n'est pas utilisé côté Connexions → on le strip (gain ~70% en taille de payload).
+    return (data.resultats ?? []).map((r) => ({ ...r, details: null }));
   },
   ["hub-resultats"],
   { revalidate: CACHE_SECONDS, tags: ["hub"] },
