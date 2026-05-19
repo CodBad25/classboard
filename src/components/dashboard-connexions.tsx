@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, RefreshCw, Flame, AlertTriangle, BarChart3, Bell, Search, X, BellPlus, History, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { ArrowLeft, RefreshCw, Flame, AlertTriangle, BarChart3, Bell, Search, X, BellPlus, History, ChevronDown, ChevronRight as ChevronRightIcon, Eye, EyeOff } from "lucide-react";
 import Fuse from "fuse.js";
 import { toast } from "sonner";
 import { getAllClasses, getEleves, getAllResultats } from "@/lib/hub-client";
 import type { HubClasse, HubEleve } from "@/lib/hub-types";
 import { studentKey, type StudentRemindersEntry } from "@/lib/student-matcher";
+import { isAnonymized, toggleAnonymize, subscribeAnonymize, anonName, anonShort } from "@/lib/anonymize";
 import {
   agregerStats,
   statsGlobales,
@@ -43,6 +44,8 @@ export function DashboardConnexions() {
   const [niveau, setNiveau] = useState<Niveau>("tous");
   const [drawer, setDrawer] = useState<Drawer | null>(null);
   const [remindersMap, setRemindersMap] = useState<Record<string, StudentRemindersEntry>>({});
+  const [, setAnonTick] = useState(0);
+  useEffect(() => subscribeAnonymize(() => setAnonTick((t) => t + 1)), []);
 
   const rechargerRappels = async () => {
     try {
@@ -148,6 +151,16 @@ export function DashboardConnexions() {
             </button>
           ))}
           <button
+            onClick={() => toggleAnonymize(allEleves)}
+            className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors ${
+              isAnonymized() ? "bg-blue-600 text-white border-blue-600" : "border-border hover:bg-muted"
+            }`}
+            title={isAnonymized() ? "Désactiver l'anonymat" : "Activer l'anonymat (noms de mathématiciens)"}
+          >
+            {isAnonymized() ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            {isAnonymized() ? "Anonyme" : "Anonymiser"}
+          </button>
+          <button
             onClick={() => { setRefreshing(true); charger(); }}
             className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-border hover:bg-muted"
             disabled={refreshing}
@@ -189,7 +202,7 @@ export function DashboardConnexions() {
                   className="w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-muted/60 border-b border-border last:border-0"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{e.prenom} {e.nom}</p>
+                    <p className="text-sm font-medium truncate">{anonName(e)}</p>
                     <p className="text-[10px] text-muted-foreground">{e.classeNom}</p>
                   </div>
                   {rappels && rappels.pendingCount > 0 && (
@@ -331,10 +344,10 @@ export function DashboardConnexions() {
                     type="button"
                     onClick={() => setDrawer({ kind: "eleve", eleve })}
                     className="w-full flex items-center justify-between gap-2 text-xs hover:bg-muted/60 rounded-md px-1 py-0.5 transition-colors text-left"
-                    title={`Ouvrir la fiche de ${eleve.prenom} ${eleve.nom}`}
+                    title={`Ouvrir la fiche de ${anonName(eleve)}`}
                   >
                     <span className="truncate">
-                      <span className="font-medium">{eleve.prenom} {eleve.nom}</span>
+                      <span className="font-medium">{anonName(eleve)}</span>
                       <span className="text-muted-foreground ml-1">· {eleve.classeNom}</span>
                     </span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 ${
@@ -625,7 +638,7 @@ function EleveDrawer({ eleve, remindersMap, onRefreshReminders, onClose }: { ele
 
   return (
     <DrawerShell
-      title={`${eleve.prenom} ${eleve.nom}`}
+      title={anonName(eleve)}
       subtitle={eleve.classeNom}
       color="#1e40af"
       onClose={onClose}
@@ -797,7 +810,7 @@ function ActiviteDrawer({ id, label, classes, onClose, onPickEleve }: {
                 className="w-full text-left flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted/60 border border-transparent hover:border-border transition-colors">
                 <span className="text-xs text-muted-foreground w-5 text-right tabular-nums">{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{r.eleve.prenom} {r.eleve.nom} <span className="text-[10px] text-muted-foreground">· {r.eleve.classeNom}</span></p>
+                  <p className="text-sm font-medium truncate">{anonName(r.eleve)} <span className="text-[10px] text-muted-foreground">· {r.eleve.classeNom}</span></p>
                   <p className="text-[10px] text-muted-foreground">{r.nb} tentative{r.nb > 1 ? "s" : ""}{r.moyPct !== null && ` · moy ${r.moyPct}%`} · {formatDate(r.dernier)}</p>
                 </div>
                 <span className={`text-xs font-bold tabular-nums shrink-0 ${c}`}>
@@ -850,7 +863,7 @@ function JourClasseDrawer({ classe, day, onClose, onPickEleve }: {
               className="border border-border rounded-xl p-2.5 cursor-pointer hover:bg-muted/60 hover:border-blue-200 transition-colors">
               <div className="flex items-center justify-between mb-1">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{eleve.prenom} {eleve.nom}</p>
+                  <p className="text-sm font-semibold truncate">{anonName(eleve)}</p>
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 shrink-0">
                   {nb} activité{nb > 1 ? "s" : ""}
@@ -945,7 +958,7 @@ function ListeDrawer({ kind, classes, onClose, onPickEleve }: {
               className="w-full text-left flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted/60 border border-transparent hover:border-border transition-colors">
               <span className="text-xs text-muted-foreground w-5 text-right tabular-nums">{i + 1}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{r.eleve.prenom} {r.eleve.nom}</p>
+                <p className="text-sm font-medium truncate">{anonName(r.eleve)}</p>
                 {r.secondary && <p className="text-[10px] text-muted-foreground truncate">{r.secondary}</p>}
               </div>
               <span className={`text-xs font-bold tabular-nums shrink-0 ${r.primaryColor ?? ""}`}>{r.primary}</span>
@@ -967,7 +980,7 @@ function EleveLine({ e, onPick }: { e: EleveStats; onPick: () => void }) {
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate flex items-center gap-1.5">
           {e.activeNow && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-          {e.prenom} {e.nom}
+          {anonName(e)}
         </p>
         <p className="text-[10px] text-muted-foreground">
           {e.jamaisConnecte ? "Jamais connecté"
