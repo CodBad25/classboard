@@ -16,9 +16,9 @@ interface HeaderProps {
 }
 
 const TABS: { id: HeaderTabId; label: string; icon: string }[] = [
+  { id: "connexions", label: "Connexions", icon: "📊" },
   { id: "reminders", label: "Rappels", icon: "📌" },
   { id: "notes", label: "Notes", icon: "📝" },
-  { id: "connexions", label: "Connexions", icon: "📊" },
 ];
 
 export function Header({ activeTab, onTabChange, pendingCount }: HeaderProps) {
