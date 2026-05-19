@@ -126,54 +126,16 @@ export function DashboardConnexions() {
 
   return (
     <div className="px-4 py-4 space-y-3">
-      {/* ── Header : stats globales + actions ── */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold">Connexions élèves</h2>
+      {/* ── Header : titre + recherche + actions sur 1 ligne ── */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="shrink-0">
+          <h2 className="text-lg font-bold leading-tight">Connexions élèves</h2>
           <p className="text-xs text-muted-foreground">
             {global.totalEleves} élèves · {classesFiltrees.length} classe{classesFiltrees.length > 1 ? "s" : ""}
             {niveau !== "tous" && ` (${niveau.replace("eme", "e")})`} · Hub temps réel
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Filtre niveau */}
-          {(["tous", "6eme", "5eme", "4eme"] as Niveau[]).map((n) => (
-            <button
-              key={n}
-              onClick={() => setNiveau(n)}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                niveau === n
-                  ? "bg-foreground text-background border-foreground"
-                  : "border-border hover:bg-muted"
-              }`}
-            >
-              {n === "tous" ? "Tous niveaux" : n.replace("eme", "ème")}
-            </button>
-          ))}
-          <button
-            onClick={() => toggleAnonymize(allEleves)}
-            className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors ${
-              isAnonymized() ? "bg-blue-600 text-white border-blue-600" : "border-border hover:bg-muted"
-            }`}
-            title={isAnonymized() ? "Désactiver l'anonymat" : "Activer l'anonymat (noms de mathématiciens)"}
-          >
-            {isAnonymized() ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-            {isAnonymized() ? "Anonyme" : "Anonymiser"}
-          </button>
-          <button
-            onClick={() => { setRefreshing(true); charger(); }}
-            className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-border hover:bg-muted"
-            disabled={refreshing}
-          >
-            <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
-            Actualiser
-          </button>
-        </div>
-      </div>
-
-      {/* ── Recherche élève (fuzzy) ── */}
-      <div className="relative">
-        <div className="relative">
+        <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
@@ -190,7 +152,6 @@ export function DashboardConnexions() {
               <X className="w-4 h-4" />
             </button>
           )}
-        </div>
         {search && searchResults.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 z-20 rounded-lg border border-border bg-card shadow-lg overflow-hidden max-h-80 overflow-y-auto">
             {searchResults.map((e) => {
@@ -223,6 +184,41 @@ export function DashboardConnexions() {
             Aucun élève trouvé pour « {search} »
           </div>
         )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {(["tous", "6eme", "5eme", "4eme"] as Niveau[]).map((n) => (
+            <button
+              key={n}
+              onClick={() => setNiveau(n)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                niveau === n
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border hover:bg-muted"
+              }`}
+            >
+              {n === "tous" ? "Tous niveaux" : n.replace("eme", "ème")}
+            </button>
+          ))}
+          <button
+            onClick={() => toggleAnonymize(allEleves)}
+            className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors ${
+              isAnonymized() ? "bg-blue-600 text-white border-blue-600" : "border-border hover:bg-muted"
+            }`}
+            title={isAnonymized() ? "Désactiver l'anonymat" : "Activer l'anonymat (noms de mathématiciens)"}
+          >
+            {isAnonymized() ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            {isAnonymized() ? "Anonyme" : "Anonymiser"}
+          </button>
+          <button
+            onClick={() => { setRefreshing(true); charger(); }}
+            className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-border hover:bg-muted"
+            disabled={refreshing}
+          >
+            <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
+            Actualiser
+          </button>
+        </div>
       </div>
 
       {/* ── 4 stats globales ── */}
