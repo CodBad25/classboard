@@ -14,10 +14,11 @@ function getKey(): string {
   return k;
 }
 
+// Cache 30s : Hub bouge rarement, on tolère ~30s de fraîcheur pour gagner en perf perçue.
 async function hubFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${HUB_URL}${path}`, {
     headers: { "x-api-key": getKey() },
-    cache: "no-store",
+    next: { revalidate: 30 },
   });
   if (!res.ok) throw new Error(`Hub API ${res.status} ${res.statusText} (${path})`);
   return res.json();
