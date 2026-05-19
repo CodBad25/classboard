@@ -125,7 +125,7 @@ export function DashboardConnexions() {
   }
 
   return (
-    <div className="px-4 py-4 space-y-4">
+    <div className="px-4 py-4 space-y-3">
       {/* ── Header : stats globales + actions ── */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
