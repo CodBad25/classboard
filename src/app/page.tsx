@@ -22,7 +22,7 @@ export default function Home() {
   const [pendingCounts, setPendingCounts] = useState<
     Record<string, number>
   >({});
-  const [activeTab, setActiveTab] = useState<TabId>("reminders");
+  const [activeTab, setActiveTab] = useState<TabId>("connexions");
   const [loading, setLoading] = useState(true);
 
   const fetchClasses = async () => {
