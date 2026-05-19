@@ -7,8 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReminderList } from "@/components/reminder-list";
 import { ClassNotesList } from "@/components/class-notes-list";
 import { FabButton } from "@/components/fab-button";
+import { DashboardConnexions } from "@/components/dashboard-connexions";
 import { ClassData } from "@/types";
 import { toast } from "sonner";
+
+type TabId = "reminders" | "notes" | "connexions";
 
 export default function Home() {
   const [classes, setClasses] = useState<ClassData[]>(
@@ -19,9 +22,7 @@ export default function Home() {
   const [pendingCounts, setPendingCounts] = useState<
     Record<string, number>
   >({});
-  const [activeTab, setActiveTab] = useState<
-    "reminders" | "notes"
-  >("reminders");
+  const [activeTab, setActiveTab] = useState<TabId>("reminders");
   const [loading, setLoading] = useState(true);
 
   const fetchClasses = async () => {
@@ -72,26 +73,29 @@ export default function Home() {
   return (
     <div className="min-h-dvh flex flex-col bg-background">
       <Header />
-      <ClassChips
-        classes={classes}
-        selectedId={selectedClassId}
-        pendingCounts={pendingCounts}
-        onSelect={setSelectedClassId}
-      />
+      {activeTab !== "connexions" && (
+        <ClassChips
+          classes={classes}
+          selectedId={selectedClassId}
+          pendingCounts={pendingCounts}
+          onSelect={setSelectedClassId}
+        />
+      )}
 
       <Tabs
         value={activeTab}
-        onValueChange={(v) =>
-          setActiveTab(v as "reminders" | "notes")
-        }
+        onValueChange={(v) => setActiveTab(v as TabId)}
         className="flex-1 flex flex-col"
       >
-        <TabsList className="mx-4 mt-3 grid w-auto grid-cols-2">
+        <TabsList className="mx-4 mt-3 grid w-auto grid-cols-3 border border-border/50">
           <TabsTrigger value="reminders">
-            Rappels ({pendingCount})
+            📌 Rappels ({pendingCount})
           </TabsTrigger>
           <TabsTrigger value="notes">
-            Notes de classe
+            📝 Notes
+          </TabsTrigger>
+          <TabsTrigger value="connexions">
+            📊 Connexions
           </TabsTrigger>
         </TabsList>
 
@@ -107,13 +111,19 @@ export default function Home() {
             classId={selectedClassId}
           />
         </TabsContent>
+
+        <TabsContent value="connexions" className="flex-1 overflow-y-auto">
+          <DashboardConnexions />
+        </TabsContent>
       </Tabs>
 
-      <FabButton
-        activeTab={activeTab}
-        classId={selectedClassId}
-        onCreated={fetchClasses}
-      />
+      {activeTab !== "connexions" && (
+        <FabButton
+          activeTab={activeTab as "reminders" | "notes"}
+          classId={selectedClassId}
+          onCreated={fetchClasses}
+        />
+      )}
     </div>
   );
 }

@@ -5,10 +5,12 @@ import { format, isPast, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { EnrichedReminder } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
+import type { StudentStatusEntry } from "@/app/api/connexions/student-status/route";
 
 interface ReminderCardProps {
   reminder: EnrichedReminder;
   showStudentName?: boolean;
+  hubStatus?: StudentStatusEntry;
   onToggle: (id: string) => void;
   onEdit: (reminder: EnrichedReminder) => void;
   onDelete: (id: string) => void;
@@ -18,6 +20,7 @@ interface ReminderCardProps {
 export function ReminderCard({
   reminder,
   showStudentName,
+  hubStatus,
   onToggle,
   onEdit,
   onDelete,
@@ -40,7 +43,7 @@ export function ReminderCard({
       className={`flex items-start gap-2.5 px-3 py-2 rounded-lg border transition-all ${
         reminder.isDone
           ? "bg-muted/20 border-border/50 opacity-60"
-          : "bg-card border-border"
+          : "bg-card border-border shadow-sm"
       }`}
     >
       <Checkbox
@@ -63,6 +66,18 @@ export function ReminderCard({
             <span className="text-[11px] text-muted-foreground font-medium underline decoration-dotted underline-offset-2 cursor-pointer">
               {reminder.studentLastName} {reminder.studentFirstName}
             </span>
+            {hubStatus && (
+              <span
+                title={hubStatus.label}
+                className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
+                  hubStatus.type === "alert"
+                    ? "bg-red-100 text-red-700 border-red-200"
+                    : "bg-orange-100 text-orange-700 border-orange-200"
+                }`}
+              >
+                {hubStatus.jamaisConnecte ? "📵 jamais" : `📵 ${hubStatus.joursInactif}j`}
+              </span>
+            )}
           </div>
         )}
         <p

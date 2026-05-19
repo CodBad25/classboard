@@ -19,6 +19,7 @@ import { StudentStats } from "./student-stats";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { ReminderForm } from "./reminder-form";
+import type { StudentStatusEntry } from "@/app/api/connexions/student-status/route";
 
 interface ReminderListProps {
   classId: string | null;
@@ -45,6 +46,14 @@ export function ReminderList({
   const [statsStudentId, setStatsStudentId] =
     useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [hubStatusMap, setHubStatusMap] = useState<Record<string, StudentStatusEntry>>({});
+
+  useEffect(() => {
+    fetch("/api/connexions/student-status")
+      .then((r) => r.json())
+      .then((data) => setHubStatusMap(data?.byStudentId ?? {}))
+      .catch(() => setHubStatusMap({}));
+  }, []);
 
   const fetchReminders = async () => {
     if (!classId) return;
@@ -303,24 +312,39 @@ export function ReminderList({
 
         {viewMode === "by-student"
           ? Object.entries(groupedByStudent).map(
-              ([, group]) => (
+              ([, group]) => {
+                const hubStatus = hubStatusMap[group.studentId];
+                return (
                 <div key={group.studentId}>
                   <h3
-                    className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 active:opacity-70"
+                    className="text-xs font-bold text-foreground/70 mb-1.5 flex items-center gap-1.5 active:opacity-70"
                     onClick={() => setStatsStudentId(group.studentId)}
                   >
                     <span className="underline decoration-dotted underline-offset-2 cursor-pointer">
                       {group.lastName} {group.firstName}
                     </span>
-                    <span className="text-[10px] font-normal">
+                    <span className="text-[10px] font-normal text-muted-foreground">
                       ({group.reminders.length})
                     </span>
+                    {hubStatus && (
+                      <span
+                        title={hubStatus.label}
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
+                          hubStatus.type === "alert"
+                            ? "bg-red-100 text-red-700 border-red-200"
+                            : "bg-orange-100 text-orange-700 border-orange-200"
+                        }`}
+                      >
+                        {hubStatus.jamaisConnecte ? "📵 jamais connecté" : `📵 inactif ${hubStatus.joursInactif}j`}
+                      </span>
+                    )}
                   </h3>
                   <div className="space-y-1">
                     {group.reminders.map((reminder) => (
                       <ReminderCard
                         key={reminder.id}
                         reminder={reminder}
+                        hubStatus={hubStatusMap[reminder.studentId]}
                         onToggle={handleToggle}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
@@ -328,7 +352,8 @@ export function ReminderList({
                     ))}
                   </div>
                 </div>
-              )
+                );
+              }
             )
           : groupedByDay.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
@@ -349,6 +374,7 @@ export function ReminderList({
                         key={reminder.id}
                         reminder={reminder}
                         showStudentName
+                        hubStatus={hubStatusMap[reminder.studentId]}
                         onToggle={handleToggle}
                         onEdit={handleEdit}
                         onDelete={handleDelete}

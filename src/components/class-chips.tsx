@@ -10,31 +10,31 @@ const COLOR_STYLES: Record<
     active:
       "ring-2 ring-class-blue border-class-blue bg-class-blue-bg text-class-blue font-bold shadow-md",
     inactive:
-      "border-class-blue/25 bg-class-blue-subtle text-class-blue/60",
+      "border-class-blue/40 bg-class-blue-subtle text-class-blue/75 shadow-sm",
   },
   cyan: {
     active:
       "ring-2 ring-class-cyan border-class-cyan bg-class-cyan-bg text-class-cyan font-bold shadow-md",
     inactive:
-      "border-class-cyan/25 bg-class-cyan-subtle text-class-cyan/60",
+      "border-class-cyan/40 bg-class-cyan-subtle text-class-cyan/75 shadow-sm",
   },
   green: {
     active:
       "ring-2 ring-class-green border-class-green bg-class-green-bg text-class-green font-bold shadow-md",
     inactive:
-      "border-class-green/25 bg-class-green-subtle text-class-green/60",
+      "border-class-green/40 bg-class-green-subtle text-class-green/75 shadow-sm",
   },
   lime: {
     active:
       "ring-2 ring-class-lime border-class-lime bg-class-lime-bg text-class-lime font-bold shadow-md",
     inactive:
-      "border-class-lime/25 bg-class-lime-subtle text-class-lime/60",
+      "border-class-lime/40 bg-class-lime-subtle text-class-lime/75 shadow-sm",
   },
   purple: {
     active:
       "ring-2 ring-class-purple border-class-purple bg-class-purple-bg text-class-purple font-bold shadow-md",
     inactive:
-      "border-class-purple/25 bg-class-purple-subtle text-class-purple/60",
+      "border-class-purple/40 bg-class-purple-subtle text-class-purple/75 shadow-sm",
   },
 };
 

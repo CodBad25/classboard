@@ -63,101 +63,101 @@
 
 :root {
   --radius: 0.75rem;
-  /* Light theme */
-  --background: oklch(0.98 0.005 250);
+  /* Light theme — warm & vivid */
+  --background: oklch(0.965 0.01 85);
   --foreground: oklch(0.15 0.02 250);
-  --card: oklch(1.00 0 0);
+  --card: oklch(0.995 0.005 85);
   --card-foreground: oklch(0.15 0.02 250);
-  --popover: oklch(1.00 0 0);
+  --popover: oklch(0.995 0.005 85);
   --popover-foreground: oklch(0.15 0.02 250);
   --primary: oklch(0.55 0.20 250);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.93 0.01 250);
+  --secondary: oklch(0.93 0.012 85);
   --secondary-foreground: oklch(0.20 0.02 250);
-  --muted: oklch(0.93 0.01 250);
-  --muted-foreground: oklch(0.45 0.02 250);
-  --accent: oklch(0.93 0.01 250);
+  --muted: oklch(0.93 0.012 85);
+  --muted-foreground: oklch(0.40 0.02 250);
+  --accent: oklch(0.93 0.012 85);
   --accent-foreground: oklch(0.20 0.02 250);
   --destructive: oklch(0.55 0.22 25);
-  --border: oklch(0.88 0.01 250);
-  --input: oklch(0.88 0.01 250);
+  --border: oklch(0.88 0.02 85);
+  --input: oklch(0.88 0.02 85);
   --ring: oklch(0.55 0.20 250);
 
-  /* Class colors — light */
-  --class-blue: oklch(0.50 0.20 250);
-  --class-blue-bg: oklch(0.92 0.04 250);
-  --class-blue-subtle: oklch(0.96 0.02 250);
-  --class-cyan: oklch(0.55 0.15 200);
-  --class-cyan-bg: oklch(0.92 0.04 200);
-  --class-cyan-subtle: oklch(0.96 0.02 200);
-  --class-green: oklch(0.55 0.18 150);
-  --class-green-bg: oklch(0.92 0.04 150);
-  --class-green-subtle: oklch(0.96 0.02 150);
-  --class-lime: oklch(0.55 0.16 125);
-  --class-lime-bg: oklch(0.92 0.04 125);
-  --class-lime-subtle: oklch(0.96 0.02 125);
-  --class-purple: oklch(0.50 0.20 300);
-  --class-purple-bg: oklch(0.92 0.04 300);
-  --class-purple-subtle: oklch(0.96 0.02 300);
+  /* Class colors — light (vivid) */
+  --class-blue: oklch(0.45 0.22 250);
+  --class-blue-bg: oklch(0.88 0.08 250);
+  --class-blue-subtle: oklch(0.93 0.04 250);
+  --class-cyan: oklch(0.48 0.16 200);
+  --class-cyan-bg: oklch(0.88 0.08 200);
+  --class-cyan-subtle: oklch(0.93 0.04 200);
+  --class-green: oklch(0.48 0.20 150);
+  --class-green-bg: oklch(0.88 0.08 150);
+  --class-green-subtle: oklch(0.93 0.04 150);
+  --class-lime: oklch(0.48 0.18 125);
+  --class-lime-bg: oklch(0.88 0.08 125);
+  --class-lime-subtle: oklch(0.93 0.04 125);
+  --class-purple: oklch(0.45 0.22 300);
+  --class-purple-bg: oklch(0.88 0.08 300);
+  --class-purple-subtle: oklch(0.93 0.04 300);
 
-  /* Category colors — light */
-  --cat-red: oklch(0.55 0.22 25);
-  --cat-red-bg: oklch(0.93 0.04 25);
-  --cat-amber: oklch(0.60 0.18 80);
-  --cat-amber-bg: oklch(0.93 0.04 80);
-  --cat-orange: oklch(0.58 0.18 55);
-  --cat-orange-bg: oklch(0.93 0.04 55);
-  --cat-slate: oklch(0.45 0.02 250);
-  --cat-slate-bg: oklch(0.93 0.01 250);
+  /* Category colors — light (punchier) */
+  --cat-red: oklch(0.50 0.24 25);
+  --cat-red-bg: oklch(0.92 0.06 25);
+  --cat-amber: oklch(0.55 0.20 80);
+  --cat-amber-bg: oklch(0.92 0.06 80);
+  --cat-orange: oklch(0.53 0.20 55);
+  --cat-orange-bg: oklch(0.92 0.06 55);
+  --cat-slate: oklch(0.40 0.03 250);
+  --cat-slate-bg: oklch(0.92 0.02 250);
 }
 
 .dark {
-  /* Dark theme (matching prototype slate-900) */
-  --background: oklch(0.13 0.02 250);
-  --foreground: oklch(0.90 0.01 250);
-  --card: oklch(0.20 0.02 250);
-  --card-foreground: oklch(0.90 0.01 250);
-  --popover: oklch(0.20 0.02 250);
-  --popover-foreground: oklch(0.90 0.01 250);
-  --primary: oklch(0.62 0.18 250);
+  /* Dark theme — rich & layered */
+  --background: oklch(0.16 0.02 260);
+  --foreground: oklch(0.93 0.01 250);
+  --card: oklch(0.22 0.025 260);
+  --card-foreground: oklch(0.93 0.01 250);
+  --popover: oklch(0.22 0.025 260);
+  --popover-foreground: oklch(0.93 0.01 250);
+  --primary: oklch(0.68 0.16 250);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.25 0.02 250);
-  --secondary-foreground: oklch(0.90 0.01 250);
-  --muted: oklch(0.25 0.02 250);
-  --muted-foreground: oklch(0.55 0.02 250);
-  --accent: oklch(0.25 0.02 250);
-  --accent-foreground: oklch(0.90 0.01 250);
-  --destructive: oklch(0.60 0.22 25);
-  --border: oklch(0.28 0.02 250);
-  --input: oklch(0.25 0.02 250);
-  --ring: oklch(0.62 0.18 250);
+  --secondary: oklch(0.28 0.025 260);
+  --secondary-foreground: oklch(0.93 0.01 250);
+  --muted: oklch(0.28 0.025 260);
+  --muted-foreground: oklch(0.60 0.02 250);
+  --accent: oklch(0.28 0.025 260);
+  --accent-foreground: oklch(0.93 0.01 250);
+  --destructive: oklch(0.65 0.22 25);
+  --border: oklch(0.32 0.025 260);
+  --input: oklch(0.28 0.025 260);
+  --ring: oklch(0.68 0.16 250);
 
-  /* Class colors — dark */
-  --class-blue: oklch(0.62 0.18 250);
-  --class-blue-bg: oklch(0.25 0.10 250);
-  --class-blue-subtle: oklch(0.18 0.05 250);
-  --class-cyan: oklch(0.70 0.15 200);
-  --class-cyan-bg: oklch(0.25 0.08 200);
-  --class-cyan-subtle: oklch(0.18 0.04 200);
-  --class-green: oklch(0.72 0.19 150);
-  --class-green-bg: oklch(0.25 0.10 150);
-  --class-green-subtle: oklch(0.18 0.05 150);
-  --class-lime: oklch(0.77 0.18 125);
-  --class-lime-bg: oklch(0.28 0.08 125);
-  --class-lime-subtle: oklch(0.18 0.04 125);
-  --class-purple: oklch(0.65 0.22 300);
-  --class-purple-bg: oklch(0.22 0.12 300);
-  --class-purple-subtle: oklch(0.16 0.06 300);
+  /* Class colors — dark (vibrant & glowy) */
+  --class-blue: oklch(0.72 0.16 250);
+  --class-blue-bg: oklch(0.28 0.08 250);
+  --class-blue-subtle: oklch(0.22 0.04 250);
+  --class-cyan: oklch(0.75 0.14 200);
+  --class-cyan-bg: oklch(0.28 0.07 200);
+  --class-cyan-subtle: oklch(0.22 0.04 200);
+  --class-green: oklch(0.75 0.17 150);
+  --class-green-bg: oklch(0.28 0.08 150);
+  --class-green-subtle: oklch(0.22 0.04 150);
+  --class-lime: oklch(0.80 0.16 125);
+  --class-lime-bg: oklch(0.30 0.07 125);
+  --class-lime-subtle: oklch(0.22 0.04 125);
+  --class-purple: oklch(0.72 0.20 300);
+  --class-purple-bg: oklch(0.26 0.10 300);
+  --class-purple-subtle: oklch(0.20 0.05 300);
 
-  /* Category colors — dark */
-  --cat-red: oklch(0.63 0.22 25);
-  --cat-red-bg: oklch(0.25 0.08 25);
-  --cat-amber: oklch(0.75 0.18 80);
-  --cat-amber-bg: oklch(0.28 0.08 80);
-  --cat-orange: oklch(0.70 0.19 55);
-  --cat-orange-bg: oklch(0.26 0.08 55);
-  --cat-slate: oklch(0.55 0.02 250);
-  --cat-slate-bg: oklch(0.25 0.02 250);
+  /* Category colors — dark (vivid) */
+  --cat-red: oklch(0.70 0.20 25);
+  --cat-red-bg: oklch(0.28 0.08 25);
+  --cat-amber: oklch(0.80 0.16 80);
+  --cat-amber-bg: oklch(0.30 0.07 80);
+  --cat-orange: oklch(0.75 0.17 55);
+  --cat-orange-bg: oklch(0.28 0.07 55);
+  --cat-slate: oklch(0.60 0.02 250);
+  --cat-slate-bg: oklch(0.28 0.02 250);
 }
 
 @layer base {

@@ -13,7 +13,7 @@ export function Header() {
   useEffect(() => setMounted(true), []);
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+    <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shadow-sm">
       <h1 className="text-xl font-bold">ClassBoard</h1>
       <div className="flex items-center gap-1">
         {mounted && (
