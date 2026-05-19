@@ -424,10 +424,7 @@ function ClasseRow({ c, onOpen, onSparkline }: { c: ClasseStats; onOpen: () => v
   return (
     <tr className="border-t border-border hover:bg-muted/30 cursor-pointer transition-colors" onClick={onOpen}>
       <td className="px-3 py-2 font-medium" style={{ borderLeft: `4px solid ${c.couleur}` }}>
-        <div className="flex items-center gap-1.5">
-          <span>{c.nom}</span>
-          <span className="text-[10px] text-muted-foreground">{c.niveau.replace("eme", "e")}</span>
-        </div>
+        <span>{c.nom}</span>
       </td>
       <td className="px-3 py-2 text-center tabular-nums">{c.effectif}</td>
       <td className="px-3 py-2 min-w-[110px]">
