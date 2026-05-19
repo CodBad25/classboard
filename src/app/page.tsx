@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Header } from "@/components/header";
+import { Header, type HeaderTabId } from "@/components/header";
 import { ClassChips } from "@/components/class-chips";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReminderList } from "@/components/reminder-list";
 import { ClassNotesList } from "@/components/class-notes-list";
 import { FabButton } from "@/components/fab-button";
@@ -11,43 +10,28 @@ import { DashboardConnexions } from "@/components/dashboard-connexions";
 import { ClassData } from "@/types";
 import { toast } from "sonner";
 
-type TabId = "reminders" | "notes" | "connexions";
-
 export default function Home() {
-  const [classes, setClasses] = useState<ClassData[]>(
-    []
-  );
-  const [selectedClassId, setSelectedClassId] =
-    useState<string | null>(null);
-  const [pendingCounts, setPendingCounts] = useState<
-    Record<string, number>
-  >({});
-  const [activeTab, setActiveTab] = useState<TabId>("connexions");
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
+  const [activeTab, setActiveTab] = useState<HeaderTabId>("connexions");
   const [loading, setLoading] = useState(true);
 
   const fetchClasses = async () => {
     try {
-      const res = await fetch(
-        "/api/classes/current"
-      );
+      const res = await fetch("/api/classes/current");
       if (res.ok) {
-        const { classes, pendingCounts } =
-          await res.json();
+        const { classes, pendingCounts } = await res.json();
         setClasses(classes);
         setPendingCounts(pendingCounts);
 
-        if (
-          classes.length > 0 &&
-          !selectedClassId
-        ) {
+        if (classes.length > 0 && !selectedClassId) {
           setSelectedClassId(classes[0].id);
         }
       }
     } catch (error) {
       console.error("Error fetching classes:", error);
-      toast.error(
-        "Erreur lors du chargement des classes"
-      );
+      toast.error("Erreur lors du chargement des classes");
     } finally {
       setLoading(false);
     }
@@ -72,7 +56,12 @@ export default function Home() {
 
   return (
     <div className="min-h-dvh flex flex-col bg-background">
-      <Header />
+      <Header
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        pendingCount={pendingCount}
+      />
+
       {activeTab !== "connexions" && (
         <ClassChips
           classes={classes}
@@ -82,40 +71,13 @@ export default function Home() {
         />
       )}
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as TabId)}
-        className="flex-1 flex flex-col"
-      >
-        <TabsList className="mx-4 mt-3 grid w-auto grid-cols-3 border border-border/50">
-          <TabsTrigger value="reminders">
-            📌 Rappels ({pendingCount})
-          </TabsTrigger>
-          <TabsTrigger value="notes">
-            📝 Notes
-          </TabsTrigger>
-          <TabsTrigger value="connexions">
-            📊 Connexions
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="reminders" className="flex-1 overflow-y-auto">
-          <ReminderList
-            classId={selectedClassId}
-            onCountChange={fetchClasses}
-          />
-        </TabsContent>
-
-        <TabsContent value="notes" className="flex-1 overflow-y-auto">
-          <ClassNotesList
-            classId={selectedClassId}
-          />
-        </TabsContent>
-
-        <TabsContent value="connexions" className="flex-1 overflow-y-auto">
-          <DashboardConnexions />
-        </TabsContent>
-      </Tabs>
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === "reminders" && (
+          <ReminderList classId={selectedClassId} onCountChange={fetchClasses} />
+        )}
+        {activeTab === "notes" && <ClassNotesList classId={selectedClassId} />}
+        {activeTab === "connexions" && <DashboardConnexions />}
+      </div>
 
       {activeTab !== "connexions" && (
         <FabButton
