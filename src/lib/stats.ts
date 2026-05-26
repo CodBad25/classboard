@@ -30,6 +30,7 @@ export interface ClasseStats {
   couleur: string;
   effectif: number;
   actifs7j: number;
+  actifsAujourdhui: number;
   actifs30j: number;
   decrocheurs: number; // inactifs >= 7j ou jamais
   tempsMoyMin: number;
@@ -78,6 +79,23 @@ export function joursActifsDans(resultats: HubResultat[], joursMax: number): num
 export function joursDepuisDerniereActivite(d: Date | null): number {
   if (!d) return Infinity;
   return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+export function estActifAujourdhui(d: Date | null): boolean {
+  if (!d) return false;
+  return d.toLocaleDateString("fr-FR") === new Date().toLocaleDateString("fr-FR");
+}
+
+export function freshnessLabel(d: Date | null): string {
+  if (!d) return "";
+  const todayStr = new Date().toLocaleDateString("fr-FR");
+  const dStr = d.toLocaleDateString("fr-FR");
+  if (dStr === todayStr) return "Auj.";
+  const hier = new Date();
+  hier.setDate(hier.getDate() - 1);
+  if (dStr === hier.toLocaleDateString("fr-FR")) return "Hier";
+  const diffJ = Math.floor((Date.now() - d.getTime()) / 86400000);
+  return `${diffJ}j`;
 }
 
 export interface InactiviteStatut {
@@ -301,6 +319,7 @@ export function agregerStats(
 
     const eff = eleveStatsArr.length;
     const actifs7j = eleveStatsArr.filter((e) => e.joursActifs7j > 0).length;
+    const actifsAujourdhui = eleveStatsArr.filter((e) => estActifAujourdhui(e.derniereActivite)).length;
     const actifs30j = eleveStatsArr.filter((e) => e.joursActifs30j > 0).length;
     const decrocheurs = eleveStatsArr.filter((e) => inactiviteStatut(e) !== null).length;
     const tempsMoyMin = eff > 0
@@ -339,6 +358,7 @@ export function agregerStats(
       couleur: couleurNiveau(classe.niveau),
       effectif: eff,
       actifs7j,
+      actifsAujourdhui,
       actifs30j,
       decrocheurs,
       tempsMoyMin,
@@ -355,6 +375,7 @@ export function agregerStats(
 export interface StatsGlobales {
   totalEleves: number;
   actifs7j: number;
+  actifsAujourdhui: number;
   decrocheurs: number;
   tempsCumuleMin: number;
   topActivites: { id: string; label: string; icone: string; nb: number; eleves: number }[];
@@ -366,6 +387,7 @@ export function statsGlobales(classes: ClasseStats[]): StatsGlobales {
   const allEleves = classes.flatMap((c) => c.eleves);
   const totalEleves = allEleves.length;
   const actifs7j = allEleves.filter((e) => e.joursActifs7j > 0).length;
+  const actifsAujourdhui = allEleves.filter((e) => estActifAujourdhui(e.derniereActivite)).length;
 
   const decrocheursList = allEleves
     .map((eleve) => {
@@ -411,6 +433,7 @@ export function statsGlobales(classes: ClasseStats[]): StatsGlobales {
   return {
     totalEleves,
     actifs7j,
+    actifsAujourdhui,
     decrocheurs: decrocheursList.length,
     tempsCumuleMin,
     topActivites,

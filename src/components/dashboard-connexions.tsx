@@ -13,6 +13,7 @@ import {
   statsGlobales,
   formatTemps,
   formatDate,
+  freshnessLabel,
   inactiviteStatut,
   buildSessions,
   moyenneEleve,
@@ -226,7 +227,7 @@ export function DashboardConnexions() {
         <StatCard label="Total élèves"        value={global.totalEleves.toString()} hue="blue"
                   onClick={() => setDrawer({ kind: "topSessions" })} />
         <StatCard label="Actifs cette semaine" value={`${global.actifs7j} / ${global.totalEleves}`}
-                  sub={`${Math.round((global.actifs7j / Math.max(global.totalEleves, 1)) * 100)}%`} hue="emerald"
+                  sub={`${Math.round((global.actifs7j / Math.max(global.totalEleves, 1)) * 100)}% · ${global.actifsAujourdhui} aujourd'hui`} hue="emerald"
                   onClick={() => setDrawer({ kind: "actifs7j" })} />
         <StatCard label="Décrocheurs"         value={global.decrocheurs.toString()} sub="inactifs 7j+" hue="orange"
                   onClick={() => setDrawer({ kind: "decrocheurs" })} />
@@ -579,12 +580,13 @@ function ClasseDrawer({ classe, onClose, onPickEleve }: { classe: ClasseStats; o
   return (
     <DrawerShell
       title={classe.nom}
-      subtitle={`${classe.effectif} élèves · ${classe.actifs7j} actifs cette semaine`}
+      subtitle={`${classe.effectif} élèves · ${classe.actifs7j} actifs cette semaine · ${classe.actifsAujourdhui} aujourd'hui`}
       color={classe.couleur}
       onClose={onClose}
     >
-      <div className="grid grid-cols-3 gap-2 px-1 py-3 -mx-1 border-b border-border mb-2">
+      <div className="grid grid-cols-4 gap-2 px-1 py-3 -mx-1 border-b border-border mb-2">
         <div className="text-center"><p className="text-lg font-black tabular-nums">{classe.engagementPct}%</p><p className="text-[10px] text-muted-foreground">engagement</p></div>
+        <div className="text-center"><p className="text-lg font-black tabular-nums text-emerald-600">{classe.actifsAujourdhui}</p><p className="text-[10px] text-muted-foreground">aujourd&apos;hui</p></div>
         <div className="text-center"><p className="text-lg font-black tabular-nums">{formatTemps(classe.tempsMoyMin)}</p><p className="text-[10px] text-muted-foreground">temps moy.</p></div>
         <div className="text-center"><p className="text-lg font-black text-orange-600 tabular-nums">{classe.decrocheurs}</p><p className="text-[10px] text-muted-foreground">décrocheurs</p></div>
       </div>
@@ -992,9 +994,9 @@ function EleveLine({ e, onPick }: { e: EleveStats; onPick: () => void }) {
             : "bg-orange-100 text-orange-700 border border-orange-200"
         }`}>{statut.label}</span>
       )}
-      {!statut && e.joursActifs7j > 0 && (
+      {!statut && e.derniereActivite && (
         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0">
-          {e.joursActifs7j}j
+          {freshnessLabel(e.derniereActivite)}
         </span>
       )}
       <span className="text-[10px] text-muted-foreground">›</span>
