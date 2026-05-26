@@ -2,13 +2,11 @@
 // Pour le client, utiliser src/lib/hub-client.ts qui passe par les routes proxy /api/hub/*.
 
 import "server-only";
-import { unstable_cache } from "next/cache";
 import type { HubClasse, HubEleve, HubResultat } from "./hub-types";
 
 export type { HubClasse, HubEleve, HubResultat } from "./hub-types";
 
 const HUB_URL = "https://hub.beltools.fr/api/v1";
-const CACHE_SECONDS = 30;
 
 function getKey(): string {
   const k = process.env.HUB_API_KEY;
@@ -25,32 +23,19 @@ async function hubFetch<T>(path: string): Promise<T> {
   return res.json();
 }
 
-export const getAllClasses = unstable_cache(
-  async (): Promise<HubClasse[]> => {
-    const data = await hubFetch<{ classes: HubClasse[] }>("/classes");
-    return data.classes ?? [];
-  },
-  ["hub-classes"],
-  { revalidate: CACHE_SECONDS, tags: ["hub"] },
-);
+export async function getAllClasses(): Promise<HubClasse[]> {
+  const data = await hubFetch<{ classes: HubClasse[] }>("/classes");
+  return data.classes ?? [];
+}
 
-export const getEleves = unstable_cache(
-  async (classeId: string): Promise<HubEleve[]> => {
-    const data = await hubFetch<{ eleves: HubEleve[] }>(
-      `/classes/${classeId}/eleves?actif=true`,
-    );
-    return data.eleves ?? [];
-  },
-  ["hub-eleves"],
-  { revalidate: CACHE_SECONDS, tags: ["hub"] },
-);
+export async function getEleves(classeId: string): Promise<HubEleve[]> {
+  const data = await hubFetch<{ eleves: HubEleve[] }>(
+    `/classes/${classeId}/eleves?actif=true`,
+  );
+  return data.eleves ?? [];
+}
 
-export const getAllResultats = unstable_cache(
-  async (): Promise<HubResultat[]> => {
-    const data = await hubFetch<{ resultats: HubResultat[] }>("/resultats");
-    // Le champ `details` n'est pas utilisé côté Connexions → on le strip (gain ~70% en taille de payload).
-    return (data.resultats ?? []).map((r) => ({ ...r, details: null }));
-  },
-  ["hub-resultats"],
-  { revalidate: CACHE_SECONDS, tags: ["hub"] },
-);
+export async function getAllResultats(): Promise<HubResultat[]> {
+  const data = await hubFetch<{ resultats: HubResultat[] }>("/resultats");
+  return (data.resultats ?? []).map((r) => ({ ...r, details: null }));
+}
