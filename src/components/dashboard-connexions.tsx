@@ -21,6 +21,7 @@ import {
   implicationLabel,
   scoreColorClasses,
   humanizeExercice,
+  groupeExercice,
   type ClasseStats,
   type EleveStats,
   type StatsGlobales,
@@ -799,88 +800,180 @@ function TopExoClasseDrawer({ classe, onClose, onPickActivite }: { classe: Class
   );
 }
 
-// ─── Drawer : Heatmap Couverture exos × élèves ──────────────────────────────
+// ─── Drawer : Couverture par chapitre (D2) + exos triés moins-fait (D1) ─────
 function CouvertureClasseDrawer({ classe, onClose, onPickEleve }: { classe: ClasseStats; onClose: () => void; onPickEleve: (e: EleveStats) => void }) {
-  // Trier exos par fréquence dans la classe (les plus utilisés d'abord)
-  const compteur = new Map<string, number>();
-  for (const e of classe.eleves) for (const r of e.resultatsRaw) {
-    compteur.set(r.exercice, (compteur.get(r.exercice) ?? 0) + 1);
+  // Compteur élèves distincts par exo + set élèves qui ont fait
+  const elevesParExo = new Map<string, Set<string>>();
+  for (const e of classe.eleves) {
+    for (const r of e.resultatsRaw) {
+      let s = elevesParExo.get(r.exercice);
+      if (!s) { s = new Set(); elevesParExo.set(r.exercice, s); }
+      s.add(e.eleveId);
+    }
   }
-  const exosTries = [...classe.catalogueIds].sort((a, b) => (compteur.get(b) ?? 0) - (compteur.get(a) ?? 0));
-  // Set par élève pour lookup O(1)
-  const setParEleve = new Map<string, Set<string>>();
-  for (const e of classe.eleves) setParEleve.set(e.eleveId, new Set(e.resultatsRaw.map((r) => r.exercice)));
-  // Tri élèves : par % couverture personnel décroissant
-  const elevesTri = [...classe.eleves].sort((a, b) => (setParEleve.get(b.eleveId)?.size ?? 0) - (setParEleve.get(a.eleveId)?.size ?? 0));
+
+  // Regrouper le catalogue par chapitre
+  type ExoInfo = { id: string; label: string; nbEleves: number; eleveIds: Set<string> };
+  type GroupeData = { key: string; label: string; icone: string; ordre: number; exos: ExoInfo[] };
+  const groupesMap = new Map<string, GroupeData>();
+  for (const id of classe.catalogueIds) {
+    const g = groupeExercice(id);
+    let gd = groupesMap.get(g.key);
+    if (!gd) { gd = { ...g, exos: [] }; groupesMap.set(g.key, gd); }
+    const eleves = elevesParExo.get(id) ?? new Set<string>();
+    gd.exos.push({ id, label: humanizeExercice(id).label, nbEleves: eleves.size, eleveIds: eleves });
+  }
+  // Trier exos : moins fait d'abord (le signal d'action)
+  for (const g of groupesMap.values()) g.exos.sort((a, b) => a.nbEleves - b.nbEleves);
+  const groupes = Array.from(groupesMap.values()).sort((a, b) => a.ordre - b.ordre);
+
+  // Couverture du groupe = nb exos touchés / nb exos du groupe
+  const couvGroupe = (g: GroupeData) => {
+    const touches = g.exos.filter((x) => x.nbEleves > 0).length;
+    const pct = g.exos.length > 0 ? Math.round((touches / g.exos.length) * 100) : 0;
+    return { touches, total: g.exos.length, pct };
+  };
+  // Couverture moyenne ÉLÈVE du groupe (B)
+  const couvElevGroupe = (g: GroupeData) => {
+    if (classe.effectif === 0 || g.exos.length === 0) return 0;
+    let sum = 0;
+    for (const e of classe.eleves) {
+      let nbFait = 0;
+      for (const x of g.exos) if (x.eleveIds.has(e.eleveId)) nbFait++;
+      sum += nbFait / g.exos.length;
+    }
+    return Math.round((sum / classe.effectif) * 100);
+  };
+
+  // État UI : groupes ouverts + exo ouvert (1 seul à la fois)
+  const [opened, setOpened] = useState<Set<string>>(new Set());
+  const [openedExo, setOpenedExo] = useState<string | null>(null);
+  const toggleGroupe = (key: string) => {
+    setOpened((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+    setOpenedExo(null);
+  };
+
+  const barColor = (pct: number) =>
+    pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-blue-500" : pct >= 25 ? "bg-amber-500" : "bg-red-400";
+  const textColor = (pct: number) =>
+    pct >= 75 ? "text-emerald-700" : pct >= 50 ? "text-blue-700" : pct >= 25 ? "text-amber-700" : "text-red-700";
 
   return (
     <DrawerShell
       title={`Couverture catalogue — ${classe.nom}`}
-      subtitle={`${classe.couvElevMoyPct}% moy/élève · ${classe.couvertureExos}/${classe.catalogueExos} exos abordés par la classe`}
+      subtitle={`${classe.couvElevMoyPct}% moy/élève · ${classe.couvertureExos}/${classe.catalogueExos} exos abordés · ${groupes.length} chapitre${groupes.length > 1 ? "s" : ""}`}
       color={classe.couleur}
       onClose={onClose}
     >
-      <div className="space-y-2">
-        <div className="text-[11px] text-muted-foreground flex items-center gap-3 px-1">
-          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-emerald-500" /> fait</span>
-          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-muted border border-border" /> non fait</span>
-          <span className="ml-auto">Tri : élèves par couverture personnelle ↓ · exos par popularité ↓</span>
-        </div>
+      <div className="flex items-center justify-between mb-2 text-[11px] text-muted-foreground">
+        <span>Cliquer un chapitre pour voir les exos · triés du moins fait en premier</span>
+        <button
+          type="button"
+          onClick={() => setOpened(opened.size === groupes.length ? new Set() : new Set(groupes.map((g) => g.key)))}
+          className="text-xs px-2 py-0.5 rounded-md border border-border hover:bg-muted transition-colors"
+        >
+          {opened.size === groupes.length ? "Tout replier" : "Tout déplier"}
+        </button>
+      </div>
 
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="text-xs border-collapse">
-            <thead>
-              <tr className="bg-muted/40 align-bottom">
-                <th className="sticky left-0 z-10 bg-muted/40 px-2 py-1 text-left font-semibold w-44 h-32">Élève</th>
-                <th className="px-2 py-1 text-center font-semibold w-12 h-32">%</th>
-                {exosTries.map((id) => {
-                  const h = humanizeExercice(id);
-                  const short = h.label.length > 22 ? h.label.slice(0, 21) + "…" : h.label;
-                  return (
-                    <th key={id} className="px-0 py-1 text-left font-normal h-32 align-bottom" title={`${h.label} · ${compteur.get(id) ?? 0} tentatives`}>
-                      <div className="flex items-end justify-center h-full">
-                        <span
-                          className="inline-block whitespace-nowrap text-[11px] text-foreground font-medium origin-bottom-left"
-                          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", paddingBottom: "4px" }}
+      <div className="space-y-1.5">
+        {groupes.map((g) => {
+          const c = couvGroupe(g);
+          const moyEl = couvElevGroupe(g);
+          const open = opened.has(g.key);
+          return (
+            <div key={g.key} className="rounded-lg border border-border bg-card overflow-hidden">
+              {/* Header chapitre */}
+              <button
+                type="button"
+                onClick={() => toggleGroupe(g.key)}
+                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-muted/40 transition-colors text-left"
+              >
+                <ChevronRightIcon className={`w-4 h-4 text-muted-foreground transition-transform shrink-0 ${open ? "rotate-90" : ""}`} />
+                <span className="text-lg shrink-0">{g.icone}</span>
+                <span className="font-semibold text-sm shrink-0">{g.label}</span>
+                <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{c.touches}/{c.total} exos abordés</span>
+                <div className="flex-1 min-w-0 flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className={`h-full ${barColor(moyEl)} transition-all`} style={{ width: `${moyEl}%` }} />
+                  </div>
+                  <span className={`text-xs font-bold tabular-nums w-10 text-right ${textColor(moyEl)}`} title="Couverture moyenne par élève sur ce chapitre">{moyEl}%</span>
+                </div>
+              </button>
+
+              {/* Liste exos */}
+              {open && (
+                <div className="border-t border-border bg-muted/20">
+                  {g.exos.map((x) => {
+                    const pctClasse = classe.effectif > 0 ? Math.round((x.nbEleves / classe.effectif) * 100) : 0;
+                    const exoOpen = openedExo === x.id;
+                    const elevesNon = classe.eleves.filter((e) => !x.eleveIds.has(e.eleveId));
+                    const elevesFait = classe.eleves.filter((e) => x.eleveIds.has(e.eleveId));
+                    return (
+                      <div key={x.id}>
+                        <button
+                          type="button"
+                          onClick={() => setOpenedExo(exoOpen ? null : x.id)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors text-left border-t border-border/60"
                         >
-                          {short}
-                        </span>
+                          <span className="w-4 shrink-0">{exoOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRightIcon className="w-3.5 h-3.5 text-muted-foreground" />}</span>
+                          <span className="flex-1 truncate text-xs">{x.label}</span>
+                          <span className="text-[11px] tabular-nums text-muted-foreground w-16 text-right">{x.nbEleves}/{classe.effectif} él.</span>
+                          <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden shrink-0">
+                            <div className={`h-full ${barColor(pctClasse)}`} style={{ width: `${pctClasse}%` }} />
+                          </div>
+                          <span className={`text-xs font-bold tabular-nums w-8 text-right ${textColor(pctClasse)}`}>{pctClasse}%</span>
+                        </button>
+
+                        {/* Détail exo : qui a fait / qui n'a pas fait */}
+                        {exoOpen && (
+                          <div className="px-6 py-2 bg-background border-t border-border/60 space-y-2">
+                            {elevesFait.length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wide text-emerald-700 font-semibold mb-1">Ont fait ({elevesFait.length})</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {elevesFait.map((e) => (
+                                    <button
+                                      key={e.eleveId}
+                                      onClick={() => onPickEleve(e)}
+                                      className="text-[11px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                                    >
+                                      {anonShort(e)}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {elevesNon.length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wide text-red-700 font-semibold mb-1">N'ont pas fait ({elevesNon.length})</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {elevesNon.map((e) => (
+                                    <button
+                                      key={e.eleveId}
+                                      onClick={() => onPickEleve(e)}
+                                      className="text-[11px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-800 border border-red-200 hover:bg-red-100"
+                                    >
+                                      {anonShort(e)}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {elevesTri.map((e) => {
-                const set = setParEleve.get(e.eleveId) ?? new Set<string>();
-                const pct = classe.catalogueExos > 0 ? Math.round((set.size / classe.catalogueExos) * 100) : 0;
-                const pctColor = pct >= 75 ? "text-emerald-700" : pct >= 50 ? "text-blue-700" : pct >= 25 ? "text-amber-700" : "text-red-700";
-                return (
-                  <tr key={e.eleveId} className="border-t border-border hover:bg-muted/30">
-                    <td className="sticky left-0 z-10 bg-card px-2 py-1 truncate max-w-[180px]">
-                      <button onClick={() => onPickEleve(e)} className="font-medium hover:underline text-left w-full truncate">
-                        {anonName(e)}
-                      </button>
-                    </td>
-                    <td className={`px-2 py-1 text-center tabular-nums font-bold ${pctColor}`}>{pct}%</td>
-                    {exosTries.map((id) => {
-                      const fait = set.has(id);
-                      return (
-                        <td key={id} className="px-1 py-1 text-center">
-                          <span
-                            className={`inline-block w-4 h-4 rounded-sm ${fait ? "bg-emerald-500" : "bg-muted border border-border"}`}
-                            title={`${humanizeExercice(id).label} — ${fait ? "fait" : "non fait"}`}
-                          />
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </DrawerShell>
   );

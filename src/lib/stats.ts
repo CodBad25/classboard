@@ -215,6 +215,38 @@ export function scoreColorClasses(score: number, total: number): { bg: string; t
 
 // ─── Humanisation des exercices ──────────────────────────────────────────────
 
+// Groupe / chapitre pédagogique pour un exercice
+// Permet de regrouper le catalogue en sections lisibles (Ch.7, Angles, Prix…)
+export interface GroupeExercice {
+  key: string;       // identifiant stable du groupe (pour Map)
+  label: string;     // titre affiché
+  icone: string;     // emoji
+  ordre: number;     // ordre d'affichage (plus petit = en haut)
+}
+
+export function groupeExercice(id: string): GroupeExercice {
+  // Apprendre par chapitre : apprendre-ch07-*, apprendre-chapitre-7-*
+  const appM = id.match(/^apprendre-(?:ch(\d+)|chapitre-(\d+))/);
+  if (appM) {
+    const ch = parseInt(appM[1] || appM[2], 10);
+    return { key: `ch${ch}`, label: `Chapitre ${ch}`, icone: "📚", ordre: 100 + ch };
+  }
+  if (id.startsWith("proportions"))      return { key: "proportions",   label: "Proportions",          icone: "📊", ordre: 200 };
+  if (id.startsWith("fractions"))        return { key: "fractions",     label: "Fractions",            icone: "🔢", ordre: 210 };
+  if (id.startsWith("parallelogramme"))  return { key: "parallelo",     label: "Parallélogrammes",     icone: "🔷", ordre: 220 };
+  if (id.startsWith("permis-rapporteur"))return { key: "rapporteur",    label: "Rapporteur",           icone: "📐", ordre: 230 };
+  if (id.startsWith("estime-angle") || id.startsWith("whats-your-angle") || id.includes("angles"))
+                                          return { key: "angles",        label: "Angles",               icone: "📐", ordre: 240 };
+  if (id.startsWith("prix"))             return { key: "prix",          label: "Calcul Prix",          icone: "💶", ordre: 250 };
+  if (id.startsWith("eval-4e-puissances"))    return { key: "puissances",label: "Puissances",           icone: "⚡", ordre: 300 };
+  if (id.startsWith("eval-4e-notation-sci"))  return { key: "notation",  label: "Notation scientifique",icone: "🔬", ordre: 310 };
+  if (id.startsWith("eval-4e-bilan"))         return { key: "bilan",     label: "Bilan",                icone: "📝", ordre: 320 };
+  if (id.startsWith("eval-"))                 return { key: "eval",      label: "Évaluations",          icone: "📝", ordre: 330 };
+  if (id.includes("aires"))              return { key: "aires",         label: "Aires",                icone: "🟦", ordre: 260 };
+  if (id.includes("volumes"))            return { key: "volumes",       label: "Volumes",              icone: "🧊", ordre: 270 };
+  return { key: "autres", label: "Autres", icone: "📘", ordre: 999 };
+}
+
 export function humanizeExercice(id: string): { label: string; icone: string } {
   // Apprendre : apprendre-ch07-flashcards, apprendre-chapitre-X-yyy-mode
   const apprendre = id.match(/^apprendre-(?:ch(\d+)|chapitre-(\d+))-(.+)$/);
