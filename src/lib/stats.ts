@@ -35,9 +35,6 @@ export interface ClasseStats {
   decrocheurs: number; // inactifs >= 7j ou jamais
   tempsMoyMin: number;
   engagementPct: number; // % actifs 7j
-  couvertureExos: number; // nb exos distincts touchés par la classe
-  catalogueExos: number; // nb exos distincts dispo au niveau (toutes classes du même niveau confondues)
-  couverturePct: number; // % du catalogue niveau touché par cette classe
   topExo: { id: string; label: string; nb: number } | null;
   sparkline30j: number[]; // nb élèves actifs / jour, 30 derniers jours
   eleves: EleveStats[];
@@ -293,17 +290,6 @@ export function agregerStats(
     resultatsParEleve.get(r.eleveId)!.push(r);
   }
 
-  // Catalogue d'exos par niveau (union des exos vus dans toutes les classes du même niveau)
-  const catalogueParNiveau = new Map<string, Set<string>>();
-  for (const { classe, eleves } of classes) {
-    let cat = catalogueParNiveau.get(classe.niveau);
-    if (!cat) { cat = new Set(); catalogueParNiveau.set(classe.niveau, cat); }
-    for (const e of eleves) {
-      const res = resultatsParEleve.get(e.id) ?? [];
-      for (const r of res) cat.add(r.exercice);
-    }
-  }
-
   return classes.map(({ classe, eleves }) => {
     const eleveStatsArr: EleveStats[] = eleves.map((e) => {
       const res = resultatsParEleve.get(e.id) ?? [];
@@ -341,7 +327,7 @@ export function agregerStats(
       : 0;
     const engagementPct = eff > 0 ? Math.round((actifs7j / eff) * 100) : 0;
 
-    // Top exo de la classe + nb d'exos distincts touchés
+    // Top exo de la classe
     const compteurExo = new Map<string, number>();
     for (const elv of eleveStatsArr) {
       for (const r of elv.resultatsRaw) {
@@ -353,11 +339,6 @@ export function agregerStats(
     for (const [id, nb] of compteurExo) {
       if (nb > maxNb) { maxNb = nb; topExo = { id, label: humanizeExercice(id).label, nb }; }
     }
-    const couvertureExos = compteurExo.size;
-    const catalogueExos = catalogueParNiveau.get(classe.niveau)?.size ?? 0;
-    const couverturePct = catalogueExos > 0
-      ? Math.round((couvertureExos / catalogueExos) * 100)
-      : 0;
 
     // Sparkline 30j (élèves actifs / jour)
     const sparkline30j: number[] = [];
@@ -382,9 +363,6 @@ export function agregerStats(
       decrocheurs,
       tempsMoyMin,
       engagementPct,
-      couvertureExos,
-      catalogueExos,
-      couverturePct,
       topExo,
       sparkline30j,
       eleves: eleveStatsArr,

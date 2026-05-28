@@ -248,7 +248,7 @@ export function DashboardConnexions() {
                 <th className="px-3 py-2 text-center font-semibold">Tendance 30j</th>
                 <th className="px-3 py-2 text-center font-semibold">Temps moy.</th>
                 <th className="px-3 py-2 text-left font-semibold">Top exo</th>
-                <th className="px-3 py-2 text-left font-semibold" title="% d'exercices du niveau touchés par la classe (au moins 1 fois)">Couverture</th>
+                <th className="px-3 py-2 text-left font-semibold">Engagement</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
@@ -291,12 +291,10 @@ export function DashboardConnexions() {
                   </td>
                   <td></td>
                   <td className="px-3 py-2 text-left tabular-nums">
-                    {(() => {
-                      const totalCouv = classesFiltrees.reduce((s, c) => s + c.couvertureExos, 0);
-                      const totalCat = classesFiltrees.reduce((s, c) => s + c.catalogueExos, 0);
-                      const pct = totalCat > 0 ? Math.round((totalCouv / totalCat) * 100) : 0;
-                      return `${pct}%`;
-                    })()}
+                    {Math.round(
+                      classesFiltrees.reduce((s, c) => s + c.engagementPct * c.effectif, 0) /
+                      Math.max(classesFiltrees.reduce((s, c) => s + c.effectif, 0), 1)
+                    )}%
                   </td>
                   <td></td>
                 </tr>
@@ -419,10 +417,6 @@ function ClasseRow({ c, onOpen, onSparkline }: { c: ClasseStats; onOpen: () => v
     c.engagementPct >= 75 ? "bg-emerald-500" :
     c.engagementPct >= 50 ? "bg-blue-500"    :
     c.engagementPct >= 25 ? "bg-amber-500"   : "bg-red-400";
-  const couvColor =
-    c.couverturePct >= 75 ? "bg-emerald-500" :
-    c.couverturePct >= 50 ? "bg-blue-500"    :
-    c.couverturePct >= 25 ? "bg-amber-500"   : "bg-red-400";
 
   return (
     <tr className="border-t border-border hover:bg-muted/30 cursor-pointer transition-colors" onClick={onOpen}>
@@ -477,13 +471,12 @@ function ClasseRow({ c, onOpen, onSparkline }: { c: ClasseStats; onOpen: () => v
           </span>
         ) : <span className="text-xs text-muted-foreground">—</span>}
       </td>
-      <td className="px-3 py-2" title={`${c.couvertureExos} / ${c.catalogueExos} exercices du niveau touchés`}>
-        <div className="flex items-center gap-1.5 min-w-[110px]">
-          <span className="text-[10px] tabular-nums text-muted-foreground w-12">{c.couvertureExos}/{c.catalogueExos}</span>
+      <td className="px-3 py-2">
+        <div className="flex items-center gap-1.5 min-w-[80px]">
           <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-            <div className={`h-full ${couvColor}`} style={{ width: `${c.couverturePct}%` }} />
+            <div className={`h-full ${engColor}`} style={{ width: `${c.engagementPct}%` }} />
           </div>
-          <span className="text-xs font-bold tabular-nums w-8 text-right">{c.couverturePct}%</span>
+          <span className="text-xs font-bold tabular-nums w-8 text-right">{c.engagementPct}%</span>
         </div>
       </td>
       <td className="px-3 py-2 text-right">
@@ -592,7 +585,7 @@ function ClasseDrawer({ classe, onClose, onPickEleve }: { classe: ClasseStats; o
       onClose={onClose}
     >
       <div className="grid grid-cols-4 gap-2 px-1 py-3 -mx-1 border-b border-border mb-2">
-        <div className="text-center" title={`${classe.couvertureExos} / ${classe.catalogueExos} exercices du niveau`}><p className="text-lg font-black tabular-nums">{classe.couverturePct}%</p><p className="text-[10px] text-muted-foreground">couverture</p></div>
+        <div className="text-center"><p className="text-lg font-black tabular-nums">{classe.engagementPct}%</p><p className="text-[10px] text-muted-foreground">engagement</p></div>
         <div className="text-center"><p className="text-lg font-black tabular-nums text-emerald-600">{classe.actifsAujourdhui}</p><p className="text-[10px] text-muted-foreground">aujourd&apos;hui</p></div>
         <div className="text-center"><p className="text-lg font-black tabular-nums">{formatTemps(classe.tempsMoyMin)}</p><p className="text-[10px] text-muted-foreground">temps moy.</p></div>
         <div className="text-center"><p className="text-lg font-black text-orange-600 tabular-nums">{classe.decrocheurs}</p><p className="text-[10px] text-muted-foreground">décrocheurs</p></div>
