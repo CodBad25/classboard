@@ -817,7 +817,7 @@ function CouvertureClasseDrawer({ classe, onClose, onPickEleve }: { classe: Clas
   type GroupeData = { key: string; label: string; icone: string; ordre: number; exos: ExoInfo[] };
   const groupesMap = new Map<string, GroupeData>();
   for (const id of classe.catalogueIds) {
-    const g = groupeExercice(id);
+    const g = groupeExercice(id, classe.niveau);
     let gd = groupesMap.get(g.key);
     if (!gd) { gd = { ...g, exos: [] }; groupesMap.set(g.key, gd); }
     const eleves = elevesParExo.get(id) ?? new Set<string>();

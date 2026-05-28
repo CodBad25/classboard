@@ -252,7 +252,36 @@ const GROUPE_AUTRES: GroupeExercice = { key: "autres", label: "Autres", icone: "
 const GROUPE_EVAL:   GroupeExercice = { key: "eval",   label: "Évaluations",  icone: "📝", ordre: 800 };
 const GROUPE_BILAN:  GroupeExercice = { key: "bilan",  label: "Bilans",       icone: "📝", ordre: 810 };
 
-export function groupeExercice(id: string): GroupeExercice {
+// Mapping chapitre → thème pour la 5e (extrait de maths-5e/client/src/lib/suivi.ts)
+const CHAPITRES_5E: Record<number, GroupeExercice> = {
+  1:  { key: "geom-bases", label: "Bases de géométrie",       icone: "📐", ordre: 401 },
+  2:  { key: "operations", label: "Opérations",               icone: "➕", ordre: 402 },
+  3:  { key: "sym-axiale", label: "Symétrie axiale",          icone: "🔁", ordre: 403 },
+  4:  { key: "perim-aires",label: "Périmètres & Aires",       icone: "🟦", ordre: 404 },
+  5:  { key: "fractions1", label: "Fractions 1",              icone: "🔢", ordre: 405 },
+  6:  { key: "triangles",  label: "Triangles",                icone: "🔺", ordre: 406 },
+  7:  { key: "proportions",label: "Proportions",              icone: "📊", ordre: 407 },
+  8:  { key: "droites-rem",label: "Droites remarquables",     icone: "📏", ordre: 408 },
+  9:  { key: "fractions2", label: "Fractions 2",              icone: "🔢", ordre: 409 },
+  10: { key: "stats",      label: "Statistiques",             icone: "📈", ordre: 410 },
+  11: { key: "tri-angles", label: "Triangles et angles",      icone: "📐", ordre: 411 },
+  12: { key: "proportion2",label: "Proportionnalité",         icone: "📊", ordre: 412 },
+  13: { key: "relatifs1",  label: "Nombres relatifs 1",       icone: "±",  ordre: 413 },
+  14: { key: "sym-centrale",label:"Symétrie centrale",        icone: "🔃", ordre: 414 },
+  15: { key: "expressions",label: "Expressions",              icone: "🧮", ordre: 415 },
+  16: { key: "parallelo",  label: "Parallélogrammes",         icone: "🔷", ordre: 416 },
+  17: { key: "relatifs2",  label: "Nombres relatifs 2",       icone: "±",  ordre: 417 },
+  18: { key: "parallelo2", label: "Parallélog. particuliers", icone: "🔷", ordre: 418 },
+  23: { key: "proba",      label: "Probabilités",             icone: "🎲", ordre: 423 },
+};
+
+// Mapping chapitre → thème pour la 6e (extrait de belmathen6eme/client/src/lib/suivi.ts)
+const CHAPITRES_6E: Record<number, GroupeExercice> = {
+  1: { key: "angles", label: "Angles",       icone: "📐", ordre: 100 },
+  2: { key: "prix",   label: "Calcul Prix",  icone: "💶", ordre: 110 },
+};
+
+export function groupeExercice(id: string, niveau?: string): GroupeExercice {
   // Évaluations bilan 4e d'abord (pour ne pas qu'un "ex1-static" fuie ailleurs)
   if (/^eval-4e-bilan/i.test(id)) return GROUPE_BILAN;
   // Détection thématique sur l'id complet (capte estime-angle, whats-your-angle,
@@ -262,11 +291,12 @@ export function groupeExercice(id: string): GroupeExercice {
       return { key: t.key, label: t.label, icone: t.icone, ordre: t.ordre };
     }
   }
-  // Pour les apprendre-chN-thème-mode où le thème n'a matché aucune règle :
-  // fallback "Chapitre N" — pour ne pas perdre l'info chapitre
+  // Pour les apprendre-chN-* sans thème détecté : mapper via la table du niveau
   const appM = id.match(/^apprendre-(?:ch|chapitre-?)(\d+)/);
   if (appM) {
     const ch = parseInt(appM[1], 10);
+    if (niveau === "5eme" && CHAPITRES_5E[ch]) return CHAPITRES_5E[ch];
+    if (niveau === "6eme" && CHAPITRES_6E[ch]) return CHAPITRES_6E[ch];
     return { key: `ch${ch}`, label: `Chapitre ${ch}`, icone: "📚", ordre: 700 + ch };
   }
   // Évaluations génériques
@@ -368,14 +398,30 @@ export function agregerStats(
     resultatsParEleve.get(r.eleveId)!.push(r);
   }
 
-  // Catalogue d'exos par niveau (union des exos vus dans toutes les classes du même niveau)
+  // App prefix attendu par niveau (filtre anti-pollution cross-niveau)
+  const appPrefixForNiveau = (niveau: string): string[] => {
+    if (niveau === "6eme") return ["maths-6e", "belmathen6eme"];
+    if (niveau === "5eme") return ["maths-5e"];
+    if (niveau === "4eme") return ["maths-4e", "eval-4e"];
+    if (niveau === "3eme") return ["maths-3e", "eval-3e"];
+    return [];
+  };
+  const resultatMatchesNiveau = (r: HubResultat, niveau: string): boolean => {
+    const prefixes = appPrefixForNiveau(niveau);
+    if (prefixes.length === 0) return true;
+    return prefixes.some((p) => r.app?.startsWith(p));
+  };
+
+  // Catalogue d'exos par niveau (union des exos VUS DANS LES APPS DU NIVEAU)
   const catalogueParNiveau = new Map<string, Set<string>>();
   for (const { classe, eleves } of classes) {
     let cat = catalogueParNiveau.get(classe.niveau);
     if (!cat) { cat = new Set(); catalogueParNiveau.set(classe.niveau, cat); }
     for (const e of eleves) {
       const res = resultatsParEleve.get(e.id) ?? [];
-      for (const r of res) cat.add(r.exercice);
+      for (const r of res) {
+        if (resultatMatchesNiveau(r, classe.niveau)) cat.add(r.exercice);
+      }
     }
   }
 
@@ -416,10 +462,14 @@ export function agregerStats(
       : 0;
     const engagementPct = eff > 0 ? Math.round((actifs7j / eff) * 100) : 0;
 
-    // Top exo + exos distincts touchés par la classe
+    // Top exo + exos distincts touchés par la classe — filtré par niveau (anti-pollution)
+    const catalogueSet = catalogueParNiveau.get(classe.niveau) ?? new Set<string>();
+    const catalogueIds = Array.from(catalogueSet);
+    const catalogueExos = catalogueSet.size;
     const compteurExo = new Map<string, number>();
     for (const elv of eleveStatsArr) {
       for (const r of elv.resultatsRaw) {
+        if (!catalogueSet.has(r.exercice)) continue; // ignore exos hors niveau
         compteurExo.set(r.exercice, (compteurExo.get(r.exercice) ?? 0) + 1);
       }
     }
@@ -428,16 +478,15 @@ export function agregerStats(
     for (const [id, nb] of compteurExo) {
       if (nb > maxNb) { maxNb = nb; topExo = { id, label: humanizeExercice(id).label, nb }; }
     }
-    const catalogueSet = catalogueParNiveau.get(classe.niveau) ?? new Set<string>();
-    const catalogueIds = Array.from(catalogueSet);
-    const catalogueExos = catalogueSet.size;
     const couvertureExos = compteurExo.size;
-    // Couverture B : moyenne par élève
+    // Couverture B : moyenne par élève (sur catalogue niveau uniquement)
     let couvElevMoyPct = 0;
     if (catalogueExos > 0 && eff > 0) {
       let sumPct = 0;
       for (const elv of eleveStatsArr) {
-        const distinct = new Set(elv.resultatsRaw.map((r) => r.exercice));
+        const distinct = new Set(
+          elv.resultatsRaw.filter((r) => catalogueSet.has(r.exercice)).map((r) => r.exercice),
+        );
         sumPct += distinct.size / catalogueExos;
       }
       couvElevMoyPct = Math.round((sumPct / eff) * 100);
