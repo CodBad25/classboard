@@ -36,7 +36,13 @@ type Drawer =
   | { kind: "topTime" }
   | { kind: "actifs7j" }
   | { kind: "decrocheurs" }
-  | { kind: "topSessions" };
+  | { kind: "topSessions" }
+  // Drawers contextuels par cellule du tableau
+  | { kind: "actifsClasse"; classe: ClasseStats }
+  | { kind: "decrocheursClasse"; classe: ClasseStats }
+  | { kind: "tempsClasse"; classe: ClasseStats }
+  | { kind: "topExoClasse"; classe: ClasseStats }
+  | { kind: "couvertureClasse"; classe: ClasseStats };
 
 export function DashboardConnexions() {
   const [classes, setClasses] = useState<ClasseStats[]>([]);
@@ -248,7 +254,7 @@ export function DashboardConnexions() {
                 <th className="px-3 py-2 text-center font-semibold">Tendance 30j</th>
                 <th className="px-3 py-2 text-center font-semibold">Temps moy.</th>
                 <th className="px-3 py-2 text-left font-semibold">Top exo</th>
-                <th className="px-3 py-2 text-left font-semibold">Engagement</th>
+                <th className="px-3 py-2 text-left font-semibold" title="Couverture moyenne par élève du catalogue d'exercices du niveau">Couverture</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
@@ -264,6 +270,7 @@ export function DashboardConnexions() {
                     c={c}
                     onOpen={() => setDrawer({ kind: "classe", classe: c })}
                     onSparkline={(day) => setDrawer({ kind: "jourClasse", classe: c, day })}
+                    onCell={(kind) => setDrawer({ kind, classe: c } as Drawer)}
                   />
                 ))
               )}
@@ -291,10 +298,13 @@ export function DashboardConnexions() {
                   </td>
                   <td></td>
                   <td className="px-3 py-2 text-left tabular-nums">
-                    {Math.round(
-                      classesFiltrees.reduce((s, c) => s + c.engagementPct * c.effectif, 0) /
-                      Math.max(classesFiltrees.reduce((s, c) => s + c.effectif, 0), 1)
-                    )}%
+                    {(() => {
+                      const eff = classesFiltrees.reduce((s, c) => s + c.effectif, 0);
+                      const moyB = eff > 0
+                        ? Math.round(classesFiltrees.reduce((s, c) => s + c.couvElevMoyPct * c.effectif, 0) / eff)
+                        : 0;
+                      return `${moyB}%`;
+                    })()}
                   </td>
                   <td></td>
                 </tr>
@@ -412,11 +422,33 @@ function StatCard({ label, value, sub, hue, onClick }: { label: string; value: s
   return onClick ? <button type="button" onClick={onClick} className={cls}>{content}</button> : <div className={cls}>{content}</div>;
 }
 
-function ClasseRow({ c, onOpen, onSparkline }: { c: ClasseStats; onOpen: () => void; onSparkline: (day: string) => void }) {
+type CellKind = "actifsClasse" | "decrocheursClasse" | "tempsClasse" | "topExoClasse" | "couvertureClasse";
+
+function ClasseRow({ c, onOpen, onSparkline, onCell }: {
+  c: ClasseStats;
+  onOpen: () => void;
+  onSparkline: (day: string) => void;
+  onCell: (kind: CellKind) => void;
+}) {
   const engColor =
     c.engagementPct >= 75 ? "bg-emerald-500" :
     c.engagementPct >= 50 ? "bg-blue-500"    :
     c.engagementPct >= 25 ? "bg-amber-500"   : "bg-red-400";
+  const couvColor =
+    c.couvElevMoyPct >= 75 ? "bg-emerald-500" :
+    c.couvElevMoyPct >= 50 ? "bg-blue-500"    :
+    c.couvElevMoyPct >= 25 ? "bg-amber-500"   : "bg-red-400";
+
+  // Helper pour cellules cliquables : stoppe propagation + appelle handler
+  const cell = (kind: CellKind, className: string, title: string, children: React.ReactNode) => (
+    <td
+      className={`${className} cursor-pointer hover:bg-blue-50/60 dark:hover:bg-blue-950/30 transition-colors`}
+      title={title}
+      onClick={(e) => { e.stopPropagation(); onCell(kind); }}
+    >
+      {children}
+    </td>
+  );
 
   return (
     <tr className="border-t border-border hover:bg-muted/30 cursor-pointer transition-colors" onClick={onOpen}>
@@ -429,35 +461,36 @@ function ClasseRow({ c, onOpen, onSparkline }: { c: ClasseStats; onOpen: () => v
         </span>
       </td>
       <td className="px-3 py-2 text-center tabular-nums">{c.effectif}</td>
-      <td className="px-3 py-2 min-w-[110px]">
+      {cell("actifsClasse", "px-3 py-2 min-w-[110px]", "Voir les élèves actifs sur 7 jours", (
         <div className="flex items-center gap-1.5">
           <span className="text-xs tabular-nums w-10">{c.actifs7j}/{c.effectif}</span>
           <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
             <div className={`h-full ${engColor}`} style={{ width: `${c.engagementPct}%` }} />
           </div>
         </div>
-      </td>
-      <td className="px-3 py-2 text-center">
-        {c.decrocheurs > 0 ? (
+      ))}
+      {cell("decrocheursClasse", "px-3 py-2 text-center", "Voir les décrocheurs de cette classe", (
+        c.decrocheurs > 0 ? (
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
             c.decrocheurs >= 5 ? "bg-red-100 text-red-700"
             : c.decrocheurs >= 2 ? "bg-orange-100 text-orange-700"
             : "bg-amber-100 text-amber-700"
           }`}>{c.decrocheurs}</span>
-        ) : <span className="text-muted-foreground">—</span>}
-      </td>
+        ) : <span className="text-muted-foreground">—</span>
+      ))}
       <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
         <Sparkline data={c.sparkline30j} color={c.couleur} onPick={(idx) => {
           const d = new Date(Date.now() - (29 - idx) * 86400000);
           onSparkline(d.toLocaleDateString("fr-FR"));
         }} />
       </td>
-      <td className="px-3 py-2 text-center text-xs font-mono">{formatTemps(c.tempsMoyMin)}</td>
-      <td className="px-3 py-2">
-        {c.topExo ? (
+      {cell("tempsClasse", "px-3 py-2 text-center text-xs font-mono", "Voir la distribution du temps par élève", (
+        <>{formatTemps(c.tempsMoyMin)}</>
+      ))}
+      {cell("topExoClasse", "px-3 py-2", "Voir tous les exercices faits par cette classe", (
+        c.topExo ? (
           <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted">
             {(() => {
-              // recompute icone from id
               const id = c.topExo.id;
               if (id.startsWith("apprendre")) return "🧠";
               if (id.startsWith("proportions")) return "📊";
@@ -469,16 +502,23 @@ function ClasseRow({ c, onOpen, onSparkline }: { c: ClasseStats; onOpen: () => v
             })()}
             <span className="truncate max-w-[120px]">{c.topExo.label}</span>
           </span>
-        ) : <span className="text-xs text-muted-foreground">—</span>}
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-1.5 min-w-[80px]">
-          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-            <div className={`h-full ${engColor}`} style={{ width: `${c.engagementPct}%` }} />
+        ) : <span className="text-xs text-muted-foreground">—</span>
+      ))}
+      {cell("couvertureClasse", "px-3 py-2", `Couverture moyenne par élève : ${c.couvElevMoyPct}% · Classe : ${c.couvertureExos}/${c.catalogueExos} exercices abordés`, (
+        <div className="flex items-center gap-1.5 min-w-[130px]">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className={`h-full ${couvColor}`} style={{ width: `${c.couvElevMoyPct}%` }} />
+              </div>
+              <span className="text-xs font-bold tabular-nums w-8 text-right">{c.couvElevMoyPct}%</span>
+            </div>
+            <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">
+              moy/élève · classe {c.couvertureExos}/{c.catalogueExos}
+            </p>
           </div>
-          <span className="text-xs font-bold tabular-nums w-8 text-right">{c.engagementPct}%</span>
         </div>
-      </td>
+      ))}
       <td className="px-3 py-2 text-right">
         <span className="text-xs text-muted-foreground hover:text-foreground">Détails ›</span>
       </td>
@@ -542,6 +582,12 @@ function DrawerRouter({
   if (drawer.kind === "eleve")  return <EleveDrawer eleve={drawer.eleve} remindersMap={remindersMap} onRefreshReminders={onRefreshReminders} onClose={onClose} />;
   if (drawer.kind === "activite") return <ActiviteDrawer id={drawer.id} label={drawer.label} classes={classes} onClose={onClose} onPickEleve={(e) => onOpen({ kind: "eleve", eleve: e })} />;
   if (drawer.kind === "jourClasse") return <JourClasseDrawer classe={drawer.classe} day={drawer.day} onClose={onClose} onPickEleve={(e) => onOpen({ kind: "eleve", eleve: e })} />;
+  // Drawers contextuels par cellule
+  if (drawer.kind === "actifsClasse") return <ActifsClasseDrawer classe={drawer.classe} onClose={onClose} onPickEleve={(e) => onOpen({ kind: "eleve", eleve: e })} />;
+  if (drawer.kind === "decrocheursClasse") return <DecrocheursClasseDrawer classe={drawer.classe} onClose={onClose} onPickEleve={(e) => onOpen({ kind: "eleve", eleve: e })} />;
+  if (drawer.kind === "tempsClasse") return <TempsClasseDrawer classe={drawer.classe} onClose={onClose} onPickEleve={(e) => onOpen({ kind: "eleve", eleve: e })} />;
+  if (drawer.kind === "topExoClasse") return <TopExoClasseDrawer classe={drawer.classe} onClose={onClose} onPickActivite={(id, label) => onOpen({ kind: "activite", id, label })} />;
+  if (drawer.kind === "couvertureClasse") return <CouvertureClasseDrawer classe={drawer.classe} onClose={onClose} onPickEleve={(e) => onOpen({ kind: "eleve", eleve: e })} />;
   // Listes "stat globale"
   return <ListeDrawer kind={drawer.kind} classes={classes} onClose={onClose} onPickEleve={(e) => onOpen({ kind: "eleve", eleve: e })} />;
 }
@@ -585,13 +631,248 @@ function ClasseDrawer({ classe, onClose, onPickEleve }: { classe: ClasseStats; o
       onClose={onClose}
     >
       <div className="grid grid-cols-4 gap-2 px-1 py-3 -mx-1 border-b border-border mb-2">
-        <div className="text-center"><p className="text-lg font-black tabular-nums">{classe.engagementPct}%</p><p className="text-[10px] text-muted-foreground">engagement</p></div>
+        <div className="text-center" title={`Couverture moyenne par élève · classe: ${classe.couvertureExos}/${classe.catalogueExos} exos abordés`}><p className="text-lg font-black tabular-nums">{classe.couvElevMoyPct}%</p><p className="text-[10px] text-muted-foreground">couverture moy/élève</p></div>
         <div className="text-center"><p className="text-lg font-black tabular-nums text-emerald-600">{classe.actifsAujourdhui}</p><p className="text-[10px] text-muted-foreground">aujourd&apos;hui</p></div>
         <div className="text-center"><p className="text-lg font-black tabular-nums">{formatTemps(classe.tempsMoyMin)}</p><p className="text-[10px] text-muted-foreground">temps moy.</p></div>
         <div className="text-center"><p className="text-lg font-black text-orange-600 tabular-nums">{classe.decrocheurs}</p><p className="text-[10px] text-muted-foreground">décrocheurs</p></div>
       </div>
       <div className="space-y-1">
         {elevesTri.map((e) => <EleveLine key={e.eleveId} e={e} onPick={() => onPickEleve(e)} />)}
+      </div>
+    </DrawerShell>
+  );
+}
+
+// ─── Drawer : Actifs 7j d'une classe ────────────────────────────────────────
+function ActifsClasseDrawer({ classe, onClose, onPickEleve }: { classe: ClasseStats; onClose: () => void; onPickEleve: (e: EleveStats) => void }) {
+  const actifs = classe.eleves
+    .filter((e) => e.joursActifs7j > 0)
+    .sort((a, b) => (b.derniereActivite?.getTime() ?? 0) - (a.derniereActivite?.getTime() ?? 0));
+  const inactifs = classe.eleves.filter((e) => e.joursActifs7j === 0);
+  return (
+    <DrawerShell
+      title={`Actifs 7 derniers jours — ${classe.nom}`}
+      subtitle={`${actifs.length}/${classe.effectif} élèves connectés cette semaine · ${classe.actifsAujourdhui} aujourd'hui`}
+      color={classe.couleur}
+      onClose={onClose}
+    >
+      {actifs.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-6 text-center">Aucun élève actif cette semaine.</p>
+      ) : (
+        <>
+          <h4 className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1">Actifs ({actifs.length})</h4>
+          <div className="space-y-1 mb-3">
+            {actifs.map((e) => <EleveLine key={e.eleveId} e={e} onPick={() => onPickEleve(e)} />)}
+          </div>
+        </>
+      )}
+      {inactifs.length > 0 && (
+        <>
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 mt-3">Inactifs cette semaine ({inactifs.length})</h4>
+          <div className="space-y-1 opacity-60">
+            {inactifs.map((e) => <EleveLine key={e.eleveId} e={e} onPick={() => onPickEleve(e)} />)}
+          </div>
+        </>
+      )}
+    </DrawerShell>
+  );
+}
+
+// ─── Drawer : Décrocheurs d'une classe ──────────────────────────────────────
+function DecrocheursClasseDrawer({ classe, onClose, onPickEleve }: { classe: ClasseStats; onClose: () => void; onPickEleve: (e: EleveStats) => void }) {
+  const decrocheurs = classe.eleves
+    .map((e) => ({ e, statut: inactiviteStatut(e) }))
+    .filter((x): x is { e: EleveStats; statut: NonNullable<ReturnType<typeof inactiviteStatut>> } => x.statut !== null)
+    .sort((a, b) => {
+      if (a.e.jamaisConnecte !== b.e.jamaisConnecte) return a.e.jamaisConnecte ? -1 : 1;
+      return (a.e.derniereActivite?.getTime() ?? 0) - (b.e.derniereActivite?.getTime() ?? 0);
+    });
+  return (
+    <DrawerShell
+      title={`Décrocheurs — ${classe.nom}`}
+      subtitle={`${decrocheurs.length} élève(s) à relancer · inactifs 7 jours ou plus`}
+      color={classe.couleur}
+      onClose={onClose}
+    >
+      {decrocheurs.length === 0 ? (
+        <p className="text-sm text-emerald-600 py-6 text-center">🎉 Aucun décrocheur dans cette classe.</p>
+      ) : (
+        <div className="space-y-1">
+          {decrocheurs.map(({ e, statut }) => (
+            <button
+              key={e.eleveId}
+              onClick={() => onPickEleve(e)}
+              className="w-full flex items-center justify-between gap-2 text-sm hover:bg-muted/60 rounded-md px-2 py-1.5 transition-colors text-left"
+            >
+              <span className="truncate font-medium">{anonName(e)}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 ${
+                statut.type === "alert"
+                  ? "bg-red-100 text-red-700 border-red-200"
+                  : "bg-orange-100 text-orange-700 border-orange-200"
+              }`}>
+                {statut.label}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </DrawerShell>
+  );
+}
+
+// ─── Drawer : Distribution temps par élève ──────────────────────────────────
+function TempsClasseDrawer({ classe, onClose, onPickEleve }: { classe: ClasseStats; onClose: () => void; onPickEleve: (e: EleveStats) => void }) {
+  const tries = [...classe.eleves].sort((a, b) => b.tempsEstimeMin - a.tempsEstimeMin);
+  const max = Math.max(1, ...tries.map((e) => e.tempsEstimeMin));
+  const total = tries.reduce((s, e) => s + e.tempsEstimeMin, 0);
+  return (
+    <DrawerShell
+      title={`Temps passé — ${classe.nom}`}
+      subtitle={`Moyenne ${formatTemps(classe.tempsMoyMin)} · cumulé ${formatTemps(total)} sur ${classe.effectif} élèves`}
+      color={classe.couleur}
+      onClose={onClose}
+    >
+      <div className="space-y-1">
+        {tries.map((e) => (
+          <button
+            key={e.eleveId}
+            onClick={() => onPickEleve(e)}
+            className="w-full flex items-center gap-2 text-sm hover:bg-muted/60 rounded-md px-2 py-1.5 transition-colors text-left"
+          >
+            <span className="flex-1 truncate font-medium">{anonName(e)}</span>
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-purple-500" style={{ width: `${(e.tempsEstimeMin / max) * 100}%` }} />
+            </div>
+            <span className="text-xs tabular-nums text-muted-foreground w-14 text-right">{formatTemps(e.tempsEstimeMin)}</span>
+          </button>
+        ))}
+      </div>
+    </DrawerShell>
+  );
+}
+
+// ─── Drawer : Tous les exercices faits par la classe ────────────────────────
+function TopExoClasseDrawer({ classe, onClose, onPickActivite }: { classe: ClasseStats; onClose: () => void; onPickActivite: (id: string, label: string) => void }) {
+  const compteur = new Map<string, { nb: number; eleves: Set<string> }>();
+  for (const e of classe.eleves) {
+    for (const r of e.resultatsRaw) {
+      let v = compteur.get(r.exercice);
+      if (!v) { v = { nb: 0, eleves: new Set() }; compteur.set(r.exercice, v); }
+      v.nb++;
+      v.eleves.add(e.eleveId);
+    }
+  }
+  const exos = Array.from(compteur.entries())
+    .map(([id, v]) => ({ id, ...humanizeExercice(id), nb: v.nb, eleves: v.eleves.size }))
+    .sort((a, b) => b.nb - a.nb);
+  const maxNb = Math.max(1, ...exos.map((x) => x.nb));
+  return (
+    <DrawerShell
+      title={`Exercices faits — ${classe.nom}`}
+      subtitle={`${exos.length} exercices distincts · catalogue niveau : ${classe.catalogueExos}`}
+      color={classe.couleur}
+      onClose={onClose}
+    >
+      {exos.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-6 text-center">Aucun exercice fait par cette classe.</p>
+      ) : (
+        <div className="space-y-1">
+          {exos.map((x) => (
+            <button
+              key={x.id}
+              onClick={() => onPickActivite(x.id, x.label)}
+              className="w-full flex items-center gap-2 text-sm hover:bg-muted/60 rounded-md px-2 py-1.5 transition-colors text-left"
+              title={`${x.eleves} élève(s) · ${x.nb} tentatives`}
+            >
+              <span className="text-base shrink-0">{x.icone}</span>
+              <span className="flex-1 truncate">{x.label}</span>
+              <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden shrink-0">
+                <div className="h-full bg-blue-500" style={{ width: `${(x.nb / maxNb) * 100}%` }} />
+              </div>
+              <span className="text-xs tabular-nums text-muted-foreground w-10 text-right">{x.nb}</span>
+              <span className="text-[10px] tabular-nums text-muted-foreground w-12 text-right">{x.eleves}él.</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </DrawerShell>
+  );
+}
+
+// ─── Drawer : Heatmap Couverture exos × élèves ──────────────────────────────
+function CouvertureClasseDrawer({ classe, onClose, onPickEleve }: { classe: ClasseStats; onClose: () => void; onPickEleve: (e: EleveStats) => void }) {
+  // Trier exos par fréquence dans la classe (les plus utilisés d'abord)
+  const compteur = new Map<string, number>();
+  for (const e of classe.eleves) for (const r of e.resultatsRaw) {
+    compteur.set(r.exercice, (compteur.get(r.exercice) ?? 0) + 1);
+  }
+  const exosTries = [...classe.catalogueIds].sort((a, b) => (compteur.get(b) ?? 0) - (compteur.get(a) ?? 0));
+  // Set par élève pour lookup O(1)
+  const setParEleve = new Map<string, Set<string>>();
+  for (const e of classe.eleves) setParEleve.set(e.eleveId, new Set(e.resultatsRaw.map((r) => r.exercice)));
+  // Tri élèves : par % couverture personnel décroissant
+  const elevesTri = [...classe.eleves].sort((a, b) => (setParEleve.get(b.eleveId)?.size ?? 0) - (setParEleve.get(a.eleveId)?.size ?? 0));
+
+  return (
+    <DrawerShell
+      title={`Couverture catalogue — ${classe.nom}`}
+      subtitle={`${classe.couvElevMoyPct}% moy/élève · ${classe.couvertureExos}/${classe.catalogueExos} exos abordés par la classe`}
+      color={classe.couleur}
+      onClose={onClose}
+    >
+      <div className="space-y-2">
+        <div className="text-[11px] text-muted-foreground flex items-center gap-3 px-1">
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-emerald-500" /> fait</span>
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-muted border border-border" /> non fait</span>
+          <span className="ml-auto">Tri : élèves par couverture personnelle ↓ · exos par popularité ↓</span>
+        </div>
+
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="text-xs">
+            <thead>
+              <tr className="bg-muted/40">
+                <th className="sticky left-0 z-10 bg-muted/40 px-2 py-1 text-left font-semibold w-44">Élève</th>
+                <th className="px-2 py-1 text-center font-semibold w-12">%</th>
+                {exosTries.map((id) => {
+                  const h = humanizeExercice(id);
+                  return (
+                    <th key={id} className="px-1 py-1 text-center font-normal" title={`${h.label} · ${compteur.get(id) ?? 0} tentatives`}>
+                      <span className="text-sm">{h.icone}</span>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {elevesTri.map((e) => {
+                const set = setParEleve.get(e.eleveId) ?? new Set<string>();
+                const pct = classe.catalogueExos > 0 ? Math.round((set.size / classe.catalogueExos) * 100) : 0;
+                const pctColor = pct >= 75 ? "text-emerald-700" : pct >= 50 ? "text-blue-700" : pct >= 25 ? "text-amber-700" : "text-red-700";
+                return (
+                  <tr key={e.eleveId} className="border-t border-border hover:bg-muted/30">
+                    <td className="sticky left-0 z-10 bg-card px-2 py-1 truncate max-w-[180px]">
+                      <button onClick={() => onPickEleve(e)} className="font-medium hover:underline text-left w-full truncate">
+                        {anonName(e)}
+                      </button>
+                    </td>
+                    <td className={`px-2 py-1 text-center tabular-nums font-bold ${pctColor}`}>{pct}%</td>
+                    {exosTries.map((id) => {
+                      const fait = set.has(id);
+                      return (
+                        <td key={id} className="px-1 py-1 text-center">
+                          <span
+                            className={`inline-block w-4 h-4 rounded-sm ${fait ? "bg-emerald-500" : "bg-muted border border-border"}`}
+                            title={`${humanizeExercice(id).label} — ${fait ? "fait" : "non fait"}`}
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </DrawerShell>
   );
