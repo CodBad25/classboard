@@ -295,8 +295,9 @@ export function groupeExercice(id: string, niveau?: string): GroupeExercice {
   const appM = id.match(/^apprendre-(?:ch|chapitre-?)(\d+)/);
   if (appM) {
     const ch = parseInt(appM[1], 10);
-    if (niveau === "5eme" && CHAPITRES_5E[ch]) return CHAPITRES_5E[ch];
-    if (niveau === "6eme" && CHAPITRES_6E[ch]) return CHAPITRES_6E[ch];
+    const withChNum = (g: GroupeExercice): GroupeExercice => ({ ...g, label: `Ch.${ch} — ${g.label}` });
+    if (niveau === "5eme" && CHAPITRES_5E[ch]) return withChNum(CHAPITRES_5E[ch]);
+    if (niveau === "6eme" && CHAPITRES_6E[ch]) return withChNum(CHAPITRES_6E[ch]);
     return { key: `ch${ch}`, label: `Chapitre ${ch}`, icone: "📚", ordre: 700 + ch };
   }
   // Évaluations génériques
