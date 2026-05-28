@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Local prototypes (not deployed)
 /prototypes
+AUDIT_ACTIVITES.md
