@@ -224,41 +224,81 @@ export interface GroupeExercice {
   ordre: number;     // ordre d'affichage (plus petit = en haut)
 }
 
+// Mapping THÈME → groupe (priorité 1, fusionne tous les exos d'un même thème)
+// Pour chaque thème, on liste les mots-clés qui doivent matcher dans l'id
+// (raw exo OU dans la partie thème d'un apprendre-chN-THÈME-mode)
+type ThemeRule = { keywords: RegExp; key: string; label: string; icone: string; ordre: number };
+const THEMES: ThemeRule[] = [
+  { keywords: /(?:^|[-_])(?:angle|rapporteur|tortue|estime-angle|whats?-?your-?angle)/i,
+                                              key: "angles",      label: "Angles",                icone: "📐", ordre: 100 },
+  { keywords: /(?:^|[-_])prix/i,              key: "prix",        label: "Calcul Prix",           icone: "💶", ordre: 110 },
+  { keywords: /(?:^|[-_])proportion/i,        key: "proportions", label: "Proportions",           icone: "📊", ordre: 120 },
+  { keywords: /(?:^|[-_])fraction/i,          key: "fractions",   label: "Fractions",             icone: "🔢", ordre: 130 },
+  { keywords: /(?:^|[-_])parallelogramme/i,   key: "parallelo",   label: "Parallélogrammes",      icone: "🔷", ordre: 140 },
+  { keywords: /(?:^|[-_])(?:triangle|symetrie|geometrie|droites?-remarquables?)/i,
+                                              key: "geometrie",   label: "Géométrie",             icone: "🔺", ordre: 150 },
+  { keywords: /(?:^|[-_])(?:aire|perimetre)/i,key: "aires",       label: "Périmètres & Aires",    icone: "🟦", ordre: 160 },
+  { keywords: /(?:^|[-_])volume/i,            key: "volumes",     label: "Volumes",               icone: "🧊", ordre: 170 },
+  { keywords: /(?:^|[-_])(?:operation|calcul)/i, key: "operations",label: "Opérations",            icone: "➕", ordre: 180 },
+  { keywords: /(?:^|[-_])statistique/i,       key: "stats",       label: "Statistiques",          icone: "📈", ordre: 190 },
+  { keywords: /(?:^|[-_])(?:nombres?-?relatif|relatif)/i, key: "relatifs", label: "Nombres relatifs", icone: "± ", ordre: 200 },
+  { keywords: /(?:^|[-_])(?:expression|developpement|factorisation)/i, key: "expressions", label: "Expressions", icone: "🧮", ordre: 210 },
+  { keywords: /(?:^|[-_])probabilit/i,        key: "proba",       label: "Probabilités",          icone: "🎲", ordre: 220 },
+  { keywords: /(?:^|[-_])puissance/i,         key: "puissances",  label: "Puissances",            icone: "⚡", ordre: 300 },
+  { keywords: /notation-sci/i,                key: "notation",    label: "Notation scientifique", icone: "🔬", ordre: 310 },
+];
+
+const GROUPE_AUTRES: GroupeExercice = { key: "autres", label: "Autres", icone: "📘", ordre: 999 };
+const GROUPE_EVAL:   GroupeExercice = { key: "eval",   label: "Évaluations",  icone: "📝", ordre: 800 };
+const GROUPE_BILAN:  GroupeExercice = { key: "bilan",  label: "Bilans",       icone: "📝", ordre: 810 };
+
 export function groupeExercice(id: string): GroupeExercice {
-  // Apprendre par chapitre : apprendre-ch07-*, apprendre-chapitre-7-*
-  const appM = id.match(/^apprendre-(?:ch(\d+)|chapitre-(\d+))/);
-  if (appM) {
-    const ch = parseInt(appM[1] || appM[2], 10);
-    return { key: `ch${ch}`, label: `Chapitre ${ch}`, icone: "📚", ordre: 100 + ch };
+  // Évaluations bilan 4e d'abord (pour ne pas qu'un "ex1-static" fuie ailleurs)
+  if (/^eval-4e-bilan/i.test(id)) return GROUPE_BILAN;
+  // Détection thématique sur l'id complet (capte estime-angle, whats-your-angle,
+  // permis-rapporteur-*, prix-*, proportions-*, angles-flashcards, etc.)
+  for (const t of THEMES) {
+    if (t.keywords.test(id)) {
+      return { key: t.key, label: t.label, icone: t.icone, ordre: t.ordre };
+    }
   }
-  if (id.startsWith("proportions"))      return { key: "proportions",   label: "Proportions",          icone: "📊", ordre: 200 };
-  if (id.startsWith("fractions"))        return { key: "fractions",     label: "Fractions",            icone: "🔢", ordre: 210 };
-  if (id.startsWith("parallelogramme"))  return { key: "parallelo",     label: "Parallélogrammes",     icone: "🔷", ordre: 220 };
-  if (id.startsWith("permis-rapporteur"))return { key: "rapporteur",    label: "Rapporteur",           icone: "📐", ordre: 230 };
-  if (id.startsWith("estime-angle") || id.startsWith("whats-your-angle") || id.includes("angles"))
-                                          return { key: "angles",        label: "Angles",               icone: "📐", ordre: 240 };
-  if (id.startsWith("prix"))             return { key: "prix",          label: "Calcul Prix",          icone: "💶", ordre: 250 };
-  if (id.startsWith("eval-4e-puissances"))    return { key: "puissances",label: "Puissances",           icone: "⚡", ordre: 300 };
-  if (id.startsWith("eval-4e-notation-sci"))  return { key: "notation",  label: "Notation scientifique",icone: "🔬", ordre: 310 };
-  if (id.startsWith("eval-4e-bilan"))         return { key: "bilan",     label: "Bilan",                icone: "📝", ordre: 320 };
-  if (id.startsWith("eval-"))                 return { key: "eval",      label: "Évaluations",          icone: "📝", ordre: 330 };
-  if (id.includes("aires"))              return { key: "aires",         label: "Aires",                icone: "🟦", ordre: 260 };
-  if (id.includes("volumes"))            return { key: "volumes",       label: "Volumes",              icone: "🧊", ordre: 270 };
-  return { key: "autres", label: "Autres", icone: "📘", ordre: 999 };
+  // Pour les apprendre-chN-thème-mode où le thème n'a matché aucune règle :
+  // fallback "Chapitre N" — pour ne pas perdre l'info chapitre
+  const appM = id.match(/^apprendre-(?:ch|chapitre-?)(\d+)/);
+  if (appM) {
+    const ch = parseInt(appM[1], 10);
+    return { key: `ch${ch}`, label: `Chapitre ${ch}`, icone: "📚", ordre: 700 + ch };
+  }
+  // Évaluations génériques
+  if (id.startsWith("eval-")) return GROUPE_EVAL;
+  return GROUPE_AUTRES;
 }
 
 export function humanizeExercice(id: string): { label: string; icone: string } {
-  // Apprendre : apprendre-ch07-flashcards, apprendre-chapitre-X-yyy-mode
+  // Apprendre : apprendre-ch07-flashcards, apprendre-ch1-angles-flashcards, apprendre-chapitre-2-prix-texte-a-trous
   const apprendre = id.match(/^apprendre-(?:ch(\d+)|chapitre-(\d+))-(.+)$/);
   if (apprendre) {
     const chNum = parseInt(apprendre[1] || apprendre[2], 10);
-    const mode = apprendre[3];
-    const labels: Record<string, string> = {
+    const rest = apprendre[3];
+    const modeLabels: Record<string, string> = {
       "flashcards":   "Flashcards",
       "texte-a-trous":"Texte à trous",
       "carte-mentale":"Carte mentale",
     };
-    return { label: `${labels[mode] ?? mode} — Ch. ${chNum}`, icone: "📚" };
+    // 1) Direct mode : apprendre-ch7-flashcards
+    if (modeLabels[rest]) {
+      return { label: `${modeLabels[rest]} — Ch. ${chNum}`, icone: "📚" };
+    }
+    // 2) Avec thème : apprendre-ch1-angles-flashcards, apprendre-ch2-prix-texte-a-trous
+    const themeMode = rest.match(/^(.+)-(flashcards|texte-a-trous|carte-mentale)$/);
+    if (themeMode) {
+      const theme = themeMode[1];
+      const mode = modeLabels[themeMode[2]];
+      const themeLabel = theme.charAt(0).toUpperCase() + theme.slice(1).replace(/-/g, " ");
+      return { label: `${mode} · ${themeLabel} (Ch. ${chNum})`, icone: "📚" };
+    }
+    // 3) Fallback
+    return { label: `${rest} — Ch. ${chNum}`, icone: "📚" };
   }
   if (id.startsWith("proportions"))     return { label: "Proportions",     icone: "📊" };
   if (id.startsWith("fractions"))       return { label: "Fractions",       icone: "🔢" };
