@@ -281,6 +281,16 @@ const CHAPITRES_6E: Record<number, GroupeExercice> = {
   2: { key: "prix",   label: "Calcul Prix",  icone: "💶", ordre: 110 },
 };
 
+// Mapping chapitre → thème pour la 4e (extrait de maths-4e/client/src/pages/Home.tsx)
+const CHAPITRES_4E: Record<number, GroupeExercice> = {
+  1: { key: "prix",       label: "Les Prix",         icone: "💰", ordre: 501 },
+  2: { key: "longueurs",  label: "Les Longueurs",    icone: "📏", ordre: 502 },
+  3: { key: "temperatures",label:"Les Températures", icone: "🌤️", ordre: 503 },
+  4: { key: "chance",     label: "La Chance",        icone: "🎲", ordre: 504 },
+  5: { key: "aires",      label: "Les Aires",        icone: "🟦", ordre: 505 },
+  6: { key: "angles-vol", label: "Angles & Volumes", icone: "📐", ordre: 506 },
+};
+
 export function groupeExercice(id: string, niveau?: string): GroupeExercice {
   // Évaluations bilan 4e d'abord (pour ne pas qu'un "ex1-static" fuie ailleurs)
   if (/^eval-4e-bilan/i.test(id)) return GROUPE_BILAN;
@@ -298,6 +308,7 @@ export function groupeExercice(id: string, niveau?: string): GroupeExercice {
     const withChNum = (g: GroupeExercice): GroupeExercice => ({ ...g, label: `Ch.${ch} — ${g.label}` });
     if (niveau === "5eme" && CHAPITRES_5E[ch]) return withChNum(CHAPITRES_5E[ch]);
     if (niveau === "6eme" && CHAPITRES_6E[ch]) return withChNum(CHAPITRES_6E[ch]);
+    if (niveau === "4eme" && CHAPITRES_4E[ch]) return withChNum(CHAPITRES_4E[ch]);
     return { key: `ch${ch}`, label: `Chapitre ${ch}`, icone: "📚", ordre: 700 + ch };
   }
   // Évaluations génériques
