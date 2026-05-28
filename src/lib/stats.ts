@@ -226,7 +226,7 @@ export function humanizeExercice(id: string): { label: string; icone: string } {
       "texte-a-trous":"Texte à trous",
       "carte-mentale":"Carte mentale",
     };
-    return { label: `${labels[mode] ?? mode} — Ch. ${chNum}`, icone: "🧠" };
+    return { label: `${labels[mode] ?? mode} — Ch. ${chNum}`, icone: "📚" };
   }
   if (id.startsWith("proportions"))     return { label: "Proportions",     icone: "📊" };
   if (id.startsWith("fractions"))       return { label: "Fractions",       icone: "🔢" };

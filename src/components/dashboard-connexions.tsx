@@ -492,7 +492,7 @@ function ClasseRow({ c, onOpen, onSparkline, onCell }: {
           <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted">
             {(() => {
               const id = c.topExo.id;
-              if (id.startsWith("apprendre")) return "🧠";
+              if (id.startsWith("apprendre")) return "📚";
               if (id.startsWith("proportions")) return "📊";
               if (id.startsWith("fractions")) return "🔢";
               if (id.startsWith("parallelogramme")) return "🔷";
@@ -828,16 +828,24 @@ function CouvertureClasseDrawer({ classe, onClose, onPickEleve }: { classe: Clas
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="text-xs">
+          <table className="text-xs border-collapse">
             <thead>
-              <tr className="bg-muted/40">
-                <th className="sticky left-0 z-10 bg-muted/40 px-2 py-1 text-left font-semibold w-44">Élève</th>
-                <th className="px-2 py-1 text-center font-semibold w-12">%</th>
+              <tr className="bg-muted/40 align-bottom">
+                <th className="sticky left-0 z-10 bg-muted/40 px-2 py-1 text-left font-semibold w-44 h-32">Élève</th>
+                <th className="px-2 py-1 text-center font-semibold w-12 h-32">%</th>
                 {exosTries.map((id) => {
                   const h = humanizeExercice(id);
+                  const short = h.label.length > 22 ? h.label.slice(0, 21) + "…" : h.label;
                   return (
-                    <th key={id} className="px-1 py-1 text-center font-normal" title={`${h.label} · ${compteur.get(id) ?? 0} tentatives`}>
-                      <span className="text-sm">{h.icone}</span>
+                    <th key={id} className="px-0 py-1 text-left font-normal h-32 align-bottom" title={`${h.label} · ${compteur.get(id) ?? 0} tentatives`}>
+                      <div className="flex items-end justify-center h-full">
+                        <span
+                          className="inline-block whitespace-nowrap text-[11px] text-foreground font-medium origin-bottom-left"
+                          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", paddingBottom: "4px" }}
+                        >
+                          {short}
+                        </span>
+                      </div>
                     </th>
                   );
                 })}
