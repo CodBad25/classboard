@@ -42,10 +42,15 @@ export function YearManager() {
     }
 
     try {
+      // S'il n'y a aucune année courante, la nouvelle le devient : sinon
+      // l'application resterait sans année active. Si une année est déjà
+      // courante, on ne bascule pas dans le dos de l'utilisateur.
+      const becomesCurrent = !currentYear;
+
       const res = await fetch("/api/school-years", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: newLabel }),
+        body: JSON.stringify({ label: newLabel, isCurrent: becomesCurrent }),
       });
 
       if (!res.ok) throw new Error("Failed to create year");
@@ -53,7 +58,11 @@ export function YearManager() {
       await fetchYears();
       setNewLabel("");
       setShowForm(false);
-      toast.success("Année ajoutée");
+      toast.success(
+        becomesCurrent
+          ? "Année ajoutée et définie comme courante"
+          : "Année ajoutée — pensez à la définir comme courante"
+      );
     } catch (error) {
       console.error("Error adding year:", error);
       toast.error("Erreur lors de l'ajout");

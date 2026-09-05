@@ -32,10 +32,14 @@ export async function getSchoolYears(): Promise<SchoolYear[]> {
 export async function getCurrentSchoolYear(): Promise<SchoolYear | null> {
   const db = getDb();
   if (!db) return null;
+  // Rien n'empêche en base d'avoir plusieurs années marquées courantes.
+  // On trie par label décroissant pour que la plus récente l'emporte,
+  // sinon Postgres peut rendre l'ancienne de façon non déterministe.
   const result = await db
     .select()
     .from(schoolYears)
     .where(eq(schoolYears.isCurrent, true))
+    .orderBy(desc(schoolYears.label))
     .limit(1);
   return result[0] ?? null;
 }
