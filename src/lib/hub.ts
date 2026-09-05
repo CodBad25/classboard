@@ -23,8 +23,19 @@ async function hubFetch<T>(path: string): Promise<T> {
   return res.json();
 }
 
-export async function getAllClasses(): Promise<HubClasse[]> {
-  const data = await hubFetch<{ classes: HubClasse[] }>("/classes");
+// Le Hub libelle ses années "26-27" là où ClassBoard stocke "2026-2027".
+export function toHubYear(label: string): string {
+  const m = label.match(/^\d{2}(\d{2})-\d{2}(\d{2})$/);
+  return m ? `${m[1]}-${m[2]}` : label;
+}
+
+// Sans filtre, le Hub renvoie les classes de TOUTES les années scolaires,
+// y compris les archivées : on récupérerait alors les élèves de l'an dernier.
+export async function getAllClasses(schoolYearLabel?: string): Promise<HubClasse[]> {
+  const annee = schoolYearLabel ? toHubYear(schoolYearLabel) : null;
+  const data = await hubFetch<{ classes: HubClasse[] }>(
+    annee ? `/classes?annee=${encodeURIComponent(annee)}` : "/classes"
+  );
   return data.classes ?? [];
 }
 

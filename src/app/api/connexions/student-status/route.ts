@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllCurrentStudents } from "@/lib/queries";
+import { getAllCurrentStudents, getCurrentSchoolYear } from "@/lib/queries";
 import { getAllClasses, getEleves, getAllResultats } from "@/lib/hub";
 import { studentKey } from "@/lib/student-matcher";
 import {
@@ -17,9 +17,10 @@ export interface StudentStatusEntry {
 
 export async function GET() {
   try {
+    const year = await getCurrentSchoolYear();
     const [students, hubClasses, allResultats] = await Promise.all([
       getAllCurrentStudents(),
-      getAllClasses(),
+      getAllClasses(year?.label),
       getAllResultats(),
     ]);
 
